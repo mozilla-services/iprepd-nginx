@@ -14,10 +14,8 @@ RUN yum-config-manager --add-repo https://openresty.org/package/centos/openresty
 RUN yum install -y openresty openresty-resty openresty-opm
 ENV PATH=$PATH:/usr/local/openresty/luajit/bin/:/usr/local/openresty/nginx/sbin/:/usr/local/openresty/bin/
 
-# Install lua packages
-RUN luarocks install lua-cjson && \
-      luarocks install luasocket && \
-      luarocks install luasec
+# Install iprepd module
+RUN opm get ajvb/iprepd-nginx >=0.1.3
 
 # Clean
 RUN yum groupremove -y 'Development Tools' && yum clean -y all

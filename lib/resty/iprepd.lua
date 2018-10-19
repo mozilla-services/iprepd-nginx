@@ -1,38 +1,18 @@
 local cjson = require('cjson')
-local http = require('socket.http')
 local lrucache = require('resty.lrucache')
-local ltn12 = require('ltn12')
+local http = require('resty.http')
 
 function fatal_error(error_msg)
   ngx.log(ngx.ERR, error_msg)
   os.exit(1)
 end
 
-function iprep_get(url, api_key, ip)
-  local headers = {
-    Authorization = 'APIKey ' .. api_key
-  }
-
-  local response = {}
-  local r, code, resp_headers = http.request {
-    method = 'GET',
-    url = url .. '/' .. ip,
-    headers = headers,
-    sink = ltn12.sink.table(response)
-  }
-
-  return {
-    r = r,
-    status_code = code,
-    body = table.concat(response),
-    headers = resp_headers,
-  }
-end
-
 local _M = {}
+local mt = { __index = _M }
 
 function _M.new(options)
   local iprepd_url = options.url or 'http://localhost:8080/'
+  local cache_ttl = options.cache_ttl or 30
   local iprepd_threshold = options.threshold
   if not iprepd_threshold then
     fatal_error('Need to pass in a threshold')
@@ -42,38 +22,46 @@ function _M.new(options)
     fatal_error('Need to pass in an api_key')
   end
 
-  http.TIMEOUT = options.timeout or 0.01
-  local cache_ttl = options.cache_ttl or 30
-
-  -- allow up to 200 items in the cache
+  -- TODO: Make configurable?
   local cache, err = lrucache.new(200)
   if not cache then
     fatal_error('failed to create the cache: ' .. (err or 'unknown'))
   end
 
-  return {
+  local self = {
     url = iprepd_url,
     threshold = iprepd_threshold,
-    api_key = iprepd_api_key,
+    api_key_hdr = {
+      ['Authorization'] = 'APIKey ' .. iprepd_api_key,
+    },
     cache_ttl = cache_ttl,
+    timeout = options.timeout or 10,
     cache = cache,
   }
+  return setmetatable(self, mt)
 end
 
 function _M.check(self, ip)
+  local httpc = http.new()
+  -- set timeout in ms
+  httpc:set_timeout(self.timeout)
+
   -- Get reputation for ip
   local resp = self.cache:get(ip)
   if not resp then
-    resp = iprep_get(self.url, self.api_key, ip)
-    if resp.status_code == 'timeout' then
-      ngx.log(ngx.ERR, 'timed out getting reputation from iprepd')
+    resp, err = httpc:request_uri(self.url .. '/' .. ip, {
+      method  = "GET",
+      headers = self.api_key_hdr,
+    })
+    if err then
+      ngx.log(ngx.ERR, 'Error with request to iprepd: ' .. err)
     else
       self.cache:set(ngx.var.remote_addr, resp, self.cache_ttl)
     end
   end
 
   -- If the IP was found
-  if resp.status_code == 200 then
+  if resp and resp.status == 200 then
     local resp_body = cjson.decode(resp.body)
 
     -- check reputation against threshold
