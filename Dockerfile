@@ -15,7 +15,7 @@ RUN yum install -y openresty openresty-resty openresty-opm
 ENV PATH=$PATH:/usr/local/openresty/luajit/bin/:/usr/local/openresty/nginx/sbin/:/usr/local/openresty/bin/
 
 # Install iprepd module
-RUN opm get ajvb/iprepd-nginx >=0.1.3
+RUN opm get ajvb/iprepd-nginx >=0.1.5
 
 # Clean
 RUN yum groupremove -y 'Development Tools' && yum clean -y all

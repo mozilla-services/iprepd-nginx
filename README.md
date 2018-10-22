@@ -85,7 +85,7 @@ Quotations in env vars matter with nginx. Don't use them if you are using `--env
 backend=http://<>               # URL to proxy to
 IPREPD_URL=http://<>            # iprepd url
 IPREPD_API_KEY="api-key"        # iprepd api key
-IPREPD_REPUTATION_THRESHOLD=50  # iprepd reputation threshold to block on
+IPREPD_REPUTATION_THRESHOLD=50  # iprepd reputation threshold, block all IP's with a reputation below the threshold
 
 #
 # optional

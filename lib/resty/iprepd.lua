@@ -13,14 +13,9 @@ local mt = { __index = _M }
 function _M.new(options)
   local iprepd_url = options.url or 'http://localhost:8080/'
   local cache_ttl = options.cache_ttl or 30
-  local iprepd_threshold = options.threshold
-  if not iprepd_threshold then
-    fatal_error('Need to pass in a threshold')
-  end
-  local iprepd_api_key = options.api_key
-  if not iprepd_api_key then
-    fatal_error('Need to pass in an api_key')
-  end
+
+  local iprepd_threshold = options.threshold or fatal_error('Need to pass in a threshold')
+  local iprepd_api_key = options.api_key or fatal_error('Need to pass in an api_key')
 
   -- TODO: Make configurable?
   local cache, err = lrucache.new(200)
@@ -47,29 +42,36 @@ function _M.check(self, ip)
   httpc:set_timeout(self.timeout)
 
   -- Get reputation for ip
-  local resp = self.cache:get(ip)
-  if not resp then
-    resp, err = httpc:request_uri(self.url .. '/' .. ip, {
+  local reputation = self.cache:get(ip)
+  if not reputation then
+    local resp, err = httpc:request_uri(self.url .. '/' .. ip, {
       method  = "GET",
       headers = self.api_key_hdr,
     })
     if err then
       ngx.log(ngx.ERR, 'Error with request to iprepd: ' .. err)
     else
-      self.cache:set(ngx.var.remote_addr, resp, self.cache_ttl)
+      -- If the IP was found
+      if resp and resp.status == 200 then
+        reputation = cjson.decode(resp.body)['reputation']
+        if reputation and reputation >= 0 and reputation <= 100 then
+          self.cache:set(ngx.var.remote_addr, reputation, self.cache_ttl)
+        else
+          ngx.log(ngx.ERR, 'Unable to parse `reputation` value from response body')
+        end
+      else
+        if resp and resp.status == 401 then
+          ngx.log(ngx.ERR, 'Authentication with iprepd failed')
+        end
+      end
     end
   end
 
-  -- If the IP was found
-  if resp and resp.status == 200 then
-    local resp_body = cjson.decode(resp.body)
-
-    -- check reputation against threshold
-    if resp_body['reputation'] >= self.threshold then
-      -- if above threshold, return 403 and log rejections
-      ngx.log(ngx.ERR, ngx.var.remote_addr .. ' rejected with a reputation of ' .. resp_body['reputation'])
-      ngx.exit(ngx.HTTP_FORBIDDEN)
-    end
+  -- check reputation against threshold
+  if reputation and reputation <= self.threshold then
+    -- return 403 and log rejections
+    ngx.log(ngx.ERR, ngx.var.remote_addr .. ' rejected with a reputation of ' .. reputation)
+    ngx.exit(ngx.HTTP_FORBIDDEN)
   end
 end
 
