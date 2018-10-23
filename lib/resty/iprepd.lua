@@ -50,27 +50,26 @@ function _M.check(self, ip)
     })
     if err then
       ngx.log(ngx.ERR, 'Error with request to iprepd: ' .. err)
-    else
-      -- If the IP was found
-      if resp and resp.status == 200 then
-        reputation = cjson.decode(resp.body)['reputation']
-        if reputation and reputation >= 0 and reputation <= 100 then
-          self.cache:set(ngx.var.remote_addr, reputation, self.cache_ttl)
-        else
-          ngx.log(ngx.ERR, 'Unable to parse `reputation` value from response body')
-        end
+      return
+    end
+
+    -- If the IP was found
+    if resp.status == 200 then
+      reputation = cjson.decode(resp.body)['reputation']
+      if reputation and reputation >= 0 and reputation <= 100 then
+        self.cache:set(ip, reputation, self.cache_ttl)
       else
-        if resp and resp.status == 401 then
-          ngx.log(ngx.ERR, 'Authentication with iprepd failed')
-        end
+        ngx.log(ngx.ERR, 'Unable to parse `reputation` value from response body')
       end
+    else
+      ngx.log(ngx.ERR, 'iprepd responded with a ' .. resp.status .. ' http status code')
     end
   end
 
   -- check reputation against threshold
   if reputation and reputation <= self.threshold then
     -- return 403 and log rejections
-    ngx.log(ngx.ERR, ngx.var.remote_addr .. ' rejected with a reputation of ' .. reputation)
+    ngx.log(ngx.ERR, ip .. ' rejected with a reputation of ' .. reputation)
     ngx.exit(ngx.HTTP_FORBIDDEN)
   end
 end
