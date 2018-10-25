@@ -69,11 +69,11 @@ server {
 The `threshold` value in the client is the numerical value inbetween 0 and 100 where clients will be blocked if their
 IP's reputation in iprepd is below this value.
 
-What you will want this value to be set to will be highly contextual to your application, with considerations of what
-kind of violations exist, how likely a client is to activate these violations, how often a client will retry, etc.
+What you will want this value to be set to will be highly contextual to your application and environment, with considerations
+of what kind of violations exist, how likely a client is to activate these violations, how often a client will retry, etc.
 
 A decent value to start at is `50`, but you will want to make sure this is tested along side the implemented iprepd
-violations for your application and environment.
+violations for your environment.
 
 #### Example
 
