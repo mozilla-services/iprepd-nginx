@@ -14,7 +14,7 @@ and integrate it yourself.
 Install using [opm](https://github.com/openresty/opm)
 
 ```
-opm get ajvb/iprepd-nginx
+opm get mozilla-services/iprepd-nginx
 ```
 
 ## Example
