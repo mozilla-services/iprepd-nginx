@@ -32,6 +32,7 @@ function _M.new(options)
     cache_ttl = cache_ttl,
     timeout = options.timeout or 10,
     cache = cache,
+    cache_errors = options.cache_errors or 1,
   }
   return setmetatable(self, mt)
 end
@@ -62,6 +63,10 @@ function _M.check(self, ip)
         ngx.log(ngx.ERR, 'Unable to parse `reputation` value from response body')
       end
     else
+      if self.cache_errors == 1 then
+        self.cache:set(ip, 100, self.cache_ttl)
+      end
+
       ngx.log(ngx.ERR, 'iprepd responded with a ' .. resp.status .. ' http status code')
     end
   end
