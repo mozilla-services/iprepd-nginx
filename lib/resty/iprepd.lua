@@ -32,7 +32,7 @@ function _M.new(options)
     cache_ttl = cache_ttl,
     timeout = options.timeout or 10,
     cache = cache,
-    cache_errors = options.cache_errors or 1,
+    cache_errors = options.cache_errors or 0,
   }
   return setmetatable(self, mt)
 end
@@ -64,6 +64,7 @@ function _M.check(self, ip)
       end
     else
       if self.cache_errors == 1 then
+        ngx.log(ngx.ERR, 'caching non-200 response, setting reputation of ' .. ip .. ' to 100')
         self.cache:set(ip, 100, self.cache_ttl)
       end
 

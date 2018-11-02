@@ -27,8 +27,8 @@ init_by_lua_block {
     url = os.getenv("IPREPD_URL") or "http://127.0.0.1:8080",
     api_key = os.getenv("IPREPD_API_KEY"),
     threshold = tonumber(os.getenv("IPREPD_REPUTATION_THRESHOLD")),
-    cache_ttl = os.getenv("IPREPD_CACHE_TTL") or 30,
-    timeout = tonumber(os.getenv("IPREPD_TIMEOUT")) or 10,
+    cache_ttl = os.getenv("IPREPD_CACHE_TTL"),
+    timeout = tonumber(os.getenv("IPREPD_TIMEOUT")),
     cache_errors = tonumber(os.getenv("IPREPD_CACHE_ERRORS")),
   })
 }
@@ -90,10 +90,10 @@ violations for your environment.
 --    url - The base URL to iprepd (defaults to "http://localhost:8080/")
 --    cache_ttl - The iprepd response cache ttl in seconds (defaults to 30)
 --    timeout - The timeout for making requests to iprepd in milliseconds (defaults to 10)
---    cache_errors - Enables or disables caching errors. Caching errors will make is so
---                   that the average additional latency added by this module in the 0.5ms
+--    cache_errors - Enables or disables caching errors. Caching errors will make it so
+--                   the average additional latency added by this module is in the 0.5ms
 --                   range (as long as there is a reasonable cache ttl), but can make
---                   testing harder.
+--                   testing harder. (defaults to disabled)
 --
 client = require("resty.iprepd").new({
   url = "http://127.0.0.1:8080",
@@ -133,7 +133,7 @@ IPREPD_REPUTATION_THRESHOLD=50  # iprepd reputation threshold, block all IP's wi
 #
 # optional
 #
-IPREPD_TIMEOUT=10  # iprepd client timeout in milliseconds (default 10ms)
-IPREPD_CACHE_TTL=60 # iprepd response cache ttl in seconds (default 30s)
-IPREPD_CACHE_ERRORS=1 # enables caching iprepd non-200 responses (1 enables, 0 disables, default is 1)
+IPREPD_TIMEOUT=10  # iprepd client timeout in milliseconds (default is 10ms)
+IPREPD_CACHE_TTL=60 # iprepd response cache ttl in seconds (default is 30s)
+IPREPD_CACHE_ERRORS=1 # enables caching iprepd non-200 responses (1 enables, 0 disables, default is 0)
 ```
