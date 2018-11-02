@@ -90,10 +90,10 @@ violations for your environment.
 --    url - The base URL to iprepd (defaults to "http://localhost:8080/")
 --    cache_ttl - The iprepd response cache ttl in seconds (defaults to 30)
 --    timeout - The timeout for making requests to iprepd in milliseconds (defaults to 10)
---    cache_errors - Enables (1) or disables (0) caching errors. Caching errors will make it so
---                   the average latency added by this module is in the 0.5ms
---                   range (as long as there is a reasonable cache ttl), but can make
---                   testing harder. (defaults to disabled)
+--    cache_errors - Enables (1) or disables (0) caching errors. Caching errors is a good
+--                   idea in production, as it can reduce the average additional latency
+--                   caused by this module if anything goes wrong with the underlying
+--                   infrastructure. (defaults to disabled)
 --
 client = require("resty.iprepd").new({
   url = "http://127.0.0.1:8080",
