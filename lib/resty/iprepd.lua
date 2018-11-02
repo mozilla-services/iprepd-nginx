@@ -11,7 +11,12 @@ local _M = {}
 local mt = { __index = _M }
 
 function _M.new(options)
-  local iprepd_url = options.url or 'http://localhost:8080/'
+  local iprepd_url = options.url or 'http://localhost:8080'
+
+  if iprepd_url:sub(-1) == '/' then
+    iprepd_url = iprepd_url:sub(1, -2)
+  end
+
   local cache_ttl = options.cache_ttl or 30
 
   local iprepd_threshold = options.threshold or fatal_error('Need to pass in a threshold')
