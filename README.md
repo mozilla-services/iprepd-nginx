@@ -90,8 +90,8 @@ violations for your environment.
 --    url - The base URL to iprepd (defaults to "http://localhost:8080/")
 --    cache_ttl - The iprepd response cache ttl in seconds (defaults to 30)
 --    timeout - The timeout for making requests to iprepd in milliseconds (defaults to 10)
---    cache_errors - Enables or disables caching errors. Caching errors will make it so
---                   the average additional latency added by this module is in the 0.5ms
+--    cache_errors - Enables (1) or disables (0) caching errors. Caching errors will make it so
+--                   the average latency added by this module is in the 0.5ms
 --                   range (as long as there is a reasonable cache ttl), but can make
 --                   testing harder. (defaults to disabled)
 --
