@@ -1,6 +1,7 @@
 local cjson = require('cjson')
-local lrucache = require('resty.lrucache')
 local http = require('resty.http')
+local lrucache = require('resty.lrucache')
+local statsd = require('resty.statsd')
 
 function fatal_error(error_msg)
   ngx.log(ngx.ERR, error_msg)
@@ -28,6 +29,11 @@ function _M.new(options)
     fatal_error('failed to create the cache: ' .. (err or 'unknown'))
   end
 
+  local statsd_client = nil
+  if options.statsd_host then
+    statsd_client = statsd
+  end
+
   local self = {
     url = iprepd_url,
     threshold = iprepd_threshold,
@@ -38,6 +44,10 @@ function _M.new(options)
     timeout = options.timeout or 10,
     cache = cache,
     cache_errors = options.cache_errors or 0,
+    statsd = statsd_client,
+    statsd_host = options.statsd_host,
+    statsd_port = options.statsd_port or 8125,
+    statsd_buffer_size =  options.statsd_buffer_size or 100,
   }
   return setmetatable(self, mt)
 end
@@ -55,6 +65,9 @@ function _M.check(self, ip)
       headers = self.api_key_hdr,
     })
     if err then
+      if self.statsd and err == "timeout" then
+        self.statsd.incr("iprepd.err.timeout")
+      end
       ngx.log(ngx.ERR, 'Error with request to iprepd: ' .. err)
       return
     end
@@ -83,6 +96,21 @@ function _M.check(self, ip)
     -- return 403 and log rejections
     ngx.log(ngx.ERR, ip .. ' rejected with a reputation of ' .. reputation)
     ngx.exit(ngx.HTTP_FORBIDDEN)
+    if self.statsd then
+      self.statsd.incr("iprepd.status.rejected")
+    end
+  else
+    if self.statsd then
+      self.statsd.incr("iprepd.status.accepted")
+    end
+  end
+end
+
+function _M.flush_stats(self)
+  if self.statsd then
+    if #self.statsd.buffer >= self.statsd_buffer_size then
+      self.statsd.flush(self.statsd_host, self.statsd_port)
+    end
   end
 end
 

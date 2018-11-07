@@ -9,6 +9,7 @@ run_dev: Dockerfile
 		-v $(shell pwd)/etc/nginx.conf:/usr/local/openresty/nginx/conf/nginx.conf \
 		-v $(shell pwd)/etc/conf.d:/usr/local/openresty/nginx/conf/conf.d \
 		-v $(shell pwd)/lib/resty/iprepd.lua:/usr/local/openresty/site/lualib/resty/iprepd.lua \
+		-v $(shell pwd)/lib/resty/statsd.lua:/usr/local/openresty/site/lualib/resty/statsd.lua \
 		--rm --network="host" -it $(IMAGE_NAME)
 
 .PHONY: build run_dev

@@ -24,12 +24,15 @@ Note: Check out `/etc` in this repo for a working example.
 ```
 init_by_lua_block {
   client = require("resty.iprepd").new({
-    url = os.getenv("IPREPD_URL") or "http://127.0.0.1:8080",
+    url = os.getenv("IPREPD_URL"),
     api_key = os.getenv("IPREPD_API_KEY"),
     threshold = tonumber(os.getenv("IPREPD_REPUTATION_THRESHOLD")),
     cache_ttl = os.getenv("IPREPD_CACHE_TTL"),
-    timeout = tonumber(os.getenv("IPREPD_TIMEOUT")),
+    timeout = tonumber(os.getenv("IPREPD_TIMEOUT")) or 10,
     cache_errors = tonumber(os.getenv("IPREPD_CACHE_ERRORS")),
+    statsd_host = os.getenv("STATSD_HOST") or nil,
+    statsd_port = tonumber(os.getenv("STATSD_PORT")) or 8125,
+    statsd_buffer_size = tonumber(os.getenv("STATSD_BUFFER_SIZE")) or 100,
   })
 }
 
@@ -94,6 +97,10 @@ violations for your environment.
 --                   idea in production, as it can reduce the average additional latency
 --                   caused by this module if anything goes wrong with the underlying
 --                   infrastructure. (defaults to disabled)
+--    statsd_host - Host of statsd collector. Setting this will enable statsd metrics collection
+--    statsd_port - Port of statsd collector. (defaults to 8125)
+--    statsd_buffer_size - Statsd buffer table length at which stats should be sent to
+--                         the collector. (defaults to 100)
 --
 client = require("resty.iprepd").new({
   url = "http://127.0.0.1:8080",
@@ -102,6 +109,9 @@ client = require("resty.iprepd").new({
   cache_ttl = 30,
   timeout = 10,
   cache_errors = 1,
+  statsd_host = "127.0.0.1",
+  statsd_port = 8125,
+  statsd_buffer_size = 100,
 })
 ```
 
@@ -136,4 +146,7 @@ IPREPD_REPUTATION_THRESHOLD=50  # iprepd reputation threshold, block all IP's wi
 IPREPD_TIMEOUT=10  # iprepd client timeout in milliseconds (default is 10ms)
 IPREPD_CACHE_TTL=60 # iprepd response cache ttl in seconds (default is 30s)
 IPREPD_CACHE_ERRORS=1 # enables caching iprepd non-200 responses (1 enables, 0 disables, default is 0)
+STATSD_HOST=127.0.0.1 # statsd host, setting this will also enable statsd metrics collection.
+STATSD_PORT=8125 # statsd port (default is 8125)
+STATSD_BUFFER_SIZE=200 # statsd buffer size (default is 100)
 ```
