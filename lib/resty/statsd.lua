@@ -3,28 +3,31 @@
 --
 local _M = {}
 
--- this table will be shared per worker process
--- if lua_code_cache is off, it will be cleared every request
-_M.buffer = {}
+_M.buffer = {count=0}
 
 function _M.flush(host, port)
   if pcall(function()
     local udp = ngx.socket.udp()
     udp:setpeername(host, port)
+    _M.buffer['count'] = nil
     udp:send(_M.buffer)
     udp:close()
   end) then
     -- pass
   else
-    ngx.log(ngx.ERR, "Error sending stats to statsd at " .. host .. ":" .. port)
+    ngx.log(ngx.ERR, 'Error sending stats to statsd at ' .. host .. ':' .. port)
   end
 
-  for k in pairs(_M.buffer) do
-    _M.buffer[k] = nil
-  end
+  -- reset buffer
+  _M.buffer = {count=0}
+end
+
+function _M.buffer_count()
+  return _M.buffer['count']
 end
 
 function _M.register(bucket, suffix)
+  _M.buffer['count'] = _M.buffer['count'] + 1
   table.insert(_M.buffer, bucket .. ':' .. suffix .. '\n')
 end
 

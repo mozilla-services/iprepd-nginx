@@ -32,7 +32,7 @@ init_by_lua_block {
     cache_errors = tonumber(os.getenv("IPREPD_CACHE_ERRORS")),
     statsd_host = os.getenv("STATSD_HOST") or nil,
     statsd_port = tonumber(os.getenv("STATSD_PORT")) or 8125,
-    statsd_buffer_size = tonumber(os.getenv("STATSD_BUFFER_SIZE")) or 100,
+    statsd_max_buffer_count = tonumber(os.getenv("STATSD_MAX_BUFFER_COUNT")) or 100,
   })
 }
 
@@ -99,8 +99,8 @@ violations for your environment.
 --                   infrastructure. (defaults to disabled)
 --    statsd_host - Host of statsd collector. Setting this will enable statsd metrics collection
 --    statsd_port - Port of statsd collector. (defaults to 8125)
---    statsd_buffer_size - Statsd buffer table length at which stats should be sent to
---                         the collector. (defaults to 100)
+--    statsd_max_buffer_count - Max number of metrics in buffer before metrics should be submitted
+--                              to statsd (defaults to 100)
 --
 client = require("resty.iprepd").new({
   url = "http://127.0.0.1:8080",
@@ -111,7 +111,7 @@ client = require("resty.iprepd").new({
   cache_errors = 1,
   statsd_host = "127.0.0.1",
   statsd_port = 8125,
-  statsd_buffer_size = 100,
+  statsd_max_buffer_count = 100,
 })
 ```
 
@@ -148,5 +148,5 @@ IPREPD_CACHE_TTL=60 # iprepd response cache ttl in seconds (default is 30s)
 IPREPD_CACHE_ERRORS=1 # enables caching iprepd non-200 responses (1 enables, 0 disables, default is 0)
 STATSD_HOST=127.0.0.1 # statsd host, setting this will also enable statsd metrics collection.
 STATSD_PORT=8125 # statsd port (default is 8125)
-STATSD_BUFFER_SIZE=200 # statsd buffer size (default is 100)
+STATSD_MAX_BUFFER_COUNT=200 # statsd max number of buffer items before submitting (default is 100)
 ```

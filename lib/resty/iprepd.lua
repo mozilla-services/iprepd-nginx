@@ -47,7 +47,7 @@ function _M.new(options)
     statsd = statsd_client,
     statsd_host = options.statsd_host,
     statsd_port = options.statsd_port or 8125,
-    statsd_buffer_size =  options.statsd_buffer_size or 100,
+    statsd_max_buffer_count =  options.statsd_max_buffer_count or 100,
   }
   return setmetatable(self, mt)
 end
@@ -108,7 +108,7 @@ end
 
 function _M.flush_stats(self)
   if self.statsd then
-    if #self.statsd.buffer >= self.statsd_buffer_size then
+    if self.statsd.buffer_count() >= self.statsd_max_buffer_count then
       self.statsd.flush(self.statsd_host, self.statsd_port)
     end
   end
