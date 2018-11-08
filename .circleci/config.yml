@@ -1,0 +1,73 @@
+version: 2
+jobs:
+  build:
+    docker:
+    - image: google/cloud-sdk
+    steps:
+    - checkout
+    - setup_remote_docker
+    - run:
+        name: Build Image
+        command: docker build -t gcr.io/moz-fx-cloudops-images-global/${CIRCLE_PROJECT_REPONAME}:latest .
+
+  push-latest:
+    docker:
+    - image: google/cloud-sdk
+    steps:
+    - checkout
+    - setup_remote_docker
+
+    - run:
+        name: Build Image
+        command: docker build -t gcr.io/moz-fx-cloudops-images-global/${CIRCLE_PROJECT_REPONAME}:latest .
+    - run:
+        name: Push Image
+        command: |
+          echo "$GCLOUD_SERVICE_KEY" > "${HOME}/gcloud-service-key.json"
+          gcloud auth activate-service-account --key-file="${HOME}/gcloud-service-key.json"
+          rm -f "${HOME}/gcloud-service-key.json"
+          gcloud auth configure-docker
+          docker push gcr.io/moz-fx-cloudops-images-global/${CIRCLE_PROJECT_REPONAME}:latest
+
+  push-tag:
+    docker:
+    - image: google/cloud-sdk
+    steps:
+    - checkout
+    - setup_remote_docker
+
+    - run:
+        name: Build Image
+        command: |
+          docker build -t "gcr.io/moz-fx-cloudops-images-global/${CIRCLE_PROJECT_REPONAME}:${CIRCLE_TAG}" .
+          docker tag "gcr.io/moz-fx-cloudops-images-global/${CIRCLE_PROJECT_REPONAME}:${CIRCLE_TAG}" "gcr.io/moz-fx-cloudops-images-global/${CIRCLE_PROJECT_REPONAME}:${CIRCLE_TAG%.*}" # 1.4.3 -> 1.4 for example
+          docker tag "gcr.io/moz-fx-cloudops-images-global/${CIRCLE_PROJECT_REPONAME}:${CIRCLE_TAG}" "gcr.io/moz-fx-cloudops-images-global/${CIRCLE_PROJECT_REPONAME}:${CIRCLE_TAG%%.*}" # 1 -> 1 for example
+    - run:
+        name: Push Image
+        command: |
+          echo "$GCLOUD_SERVICE_KEY" > "${HOME}/gcloud-service-key.json"
+          gcloud auth activate-service-account --key-file="${HOME}/gcloud-service-key.json"
+          rm -f "${HOME}/gcloud-service-key.json"
+          gcloud auth configure-docker
+          docker push "gcr.io/moz-fx-cloudops-images-global/${CIRCLE_PROJECT_REPONAME}:${CIRCLE_TAG}"
+          docker push "gcr.io/moz-fx-cloudops-images-global/${CIRCLE_PROJECT_REPONAME}:${CIRCLE_TAG%.*}" # 1.4.3 -> 1.4 for example
+          docker push "gcr.io/moz-fx-cloudops-images-global/${CIRCLE_PROJECT_REPONAME}:${CIRCLE_TAG%%.*}" # 1 -> 1 for example
+
+workflows:
+  version: 2
+  push:
+    jobs:
+    - build:
+        filters:
+          branches:
+            ignore: master
+    - push-latest:
+        filters:
+          branches:
+            only: master
+    - push-tag:
+        filters:
+          tags:
+            only: /^\d+\.\d+\.\d+$/
+          branches:
+            ignore: /.*/
