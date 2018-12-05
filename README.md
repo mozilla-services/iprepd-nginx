@@ -36,6 +36,10 @@ init_by_lua_block {
   })
 }
 
+init_worker_by_lua_block {
+  client:config_flush_timer()
+}
+
 server {
   listen       80;
   root         /dev/null;
@@ -52,16 +56,22 @@ server {
 
   set_by_lua_block $backend { return os.getenv("backend") }
 
-  # Default location, will enforce authentication there
   location / {
     proxy_set_header "X-Forwarded-Port" $server_port;
     proxy_set_header "X-Forwarded-For" $proxy_add_x_forwarded_for;
     proxy_set_header "X-Real-IP" $remote_addr;
     proxy_set_header "Host" $host;
+    proxy_pass $backend;
+
     access_by_lua_block {
       client:check(ngx.var.remote_addr)
     }
-    proxy_pass $backend;
+
+    log_by_lua_block {
+      if client.statsd then
+        client.statsd.set("iprepd.ips_seen", ngx.var.remote_addr)
+      end
+    }
   }
 }
 ```

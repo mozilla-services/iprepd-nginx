@@ -49,6 +49,7 @@ function _M.new(options)
     statsd_port = options.statsd_port or 8125,
     statsd_max_buffer_count =  options.statsd_max_buffer_count or 100,
   }
+
   return setmetatable(self, mt)
 end
 
@@ -95,10 +96,10 @@ function _M.check(self, ip)
   if reputation and reputation <= self.threshold then
     -- return 403 and log rejections
     ngx.log(ngx.ERR, ip .. ' rejected with a reputation of ' .. reputation)
-    ngx.exit(ngx.HTTP_FORBIDDEN)
     if self.statsd then
       self.statsd.incr("iprepd.status.rejected")
     end
+    ngx.exit(ngx.HTTP_FORBIDDEN)
   else
     if self.statsd then
       self.statsd.incr("iprepd.status.accepted")
@@ -112,6 +113,14 @@ function _M.flush_stats(self)
       self.statsd.flush(self.statsd_host, self.statsd_port)
     end
   end
+end
+
+function _M.async_flush_stats(premature, self)
+  self.statsd.flush(self.statsd_host, self.statsd_port)
+end
+
+function _M.config_flush_timer(self)
+  ngx.timer.every(5, self.async_flush_stats, self)
 end
 
 return _M
