@@ -33,6 +33,9 @@ init_by_lua_block {
     statsd_host = os.getenv("STATSD_HOST") or nil,
     statsd_port = tonumber(os.getenv("STATSD_PORT")) or 8125,
     statsd_max_buffer_count = tonumber(os.getenv("STATSD_MAX_BUFFER_COUNT")) or 100,
+    statsd_flush_timer = tonumber(os.getenv("STATSD_FLUSH_TIMER")) or 5,
+    dont_block = tonumber(os.getenv("DONT_BLOCK")) or 0,
+    whitelist = {},
   })
 }
 
@@ -101,8 +104,9 @@ violations for your environment.
 --
 --  Optional parameters:
 --    url - The base URL to iprepd (defaults to "http://localhost:8080/")
---    cache_ttl - The iprepd response cache ttl in seconds (defaults to 30)
 --    timeout - The timeout for making requests to iprepd in milliseconds (defaults to 10)
+--    cache_ttl - The iprepd response cache ttl in seconds (defaults to 30)
+--    cache_buffer_count - Max number of entries allowed in the cache. (defaults to 200)
 --    cache_errors - Enables (1) or disables (0) caching errors. Caching errors is a good
 --                   idea in production, as it can reduce the average additional latency
 --                   caused by this module if anything goes wrong with the underlying
@@ -111,17 +115,24 @@ violations for your environment.
 --    statsd_port - Port of statsd collector. (defaults to 8125)
 --    statsd_max_buffer_count - Max number of metrics in buffer before metrics should be submitted
 --                              to statsd (defaults to 100)
+--    statsd_flush_timer - Interval for attempting to flush the stats in seconds. (defaults to 5)
+--    dont_block - Enables (1) or disables (0) not blocking within nginx by returning a 403. (defaults to disabled)
+--    whitelist - List of whitelisted IP's and IP CIDR's. (defaults to empty)
 --
 client = require("resty.iprepd").new({
-  url = "http://127.0.0.1:8080",
   api_key = os.getenv("IPREPD_API_KEY"),
   threshold = 50,
-  cache_ttl = 30,
+  url = "http://127.0.0.1:8080",
   timeout = 10,
+  cache_ttl = 30,
+  cache_buffer_count = 1000,
   cache_errors = 1,
   statsd_host = "127.0.0.1",
   statsd_port = 8125,
   statsd_max_buffer_count = 100,
+  statsd_flush_timer = 10,
+  dont_block = 0,
+  whitelist = {"127.0.0.1", "10.10.10.0/24", "192.168.0.0/16"}
 })
 ```
 
@@ -137,7 +148,7 @@ $ make run_dev
 
 Then you will be able to hit this proxy with: `curl http://localhost:80`
 
-### Environment Variables
+### Environment Variables for Dev
 
 #### Note:
 
@@ -153,10 +164,12 @@ IPREPD_REPUTATION_THRESHOLD=50  # iprepd reputation threshold, block all IP's wi
 #
 # optional
 #
-IPREPD_TIMEOUT=10  # iprepd client timeout in milliseconds (default is 10ms)
-IPREPD_CACHE_TTL=60 # iprepd response cache ttl in seconds (default is 30s)
-IPREPD_CACHE_ERRORS=1 # enables caching iprepd non-200 responses (1 enables, 0 disables, default is 0)
-STATSD_HOST=127.0.0.1 # statsd host, setting this will also enable statsd metrics collection.
-STATSD_PORT=8125 # statsd port (default is 8125)
-STATSD_MAX_BUFFER_COUNT=200 # statsd max number of buffer items before submitting (default is 100)
+IPREPD_TIMEOUT=10
+IPREPD_CACHE_TTL=30
+IPREPD_CACHE_ERRORS=0
+STATSD_HOST=127.0.0.1
+STATSD_PORT=8125
+STATSD_MAX_BUFFER_COUNT=200
+STATSD_FLUSH_TIMER=2
+DONT_BLOCK=0
 ```
