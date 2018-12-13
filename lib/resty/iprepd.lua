@@ -63,6 +63,8 @@ function _M.new(options)
 end
 
 function _M.check(self, ip)
+  ngx.req.set_header('X-Foxsec-IP-Reputation-Below-Threshold', 'false')
+  ngx.req.set_header('X-Foxsec-Block', 'false')
   if self.whitelist then
     if iputils.ip_in_cidrs(ip, self.whitelist) then
       return
@@ -76,20 +78,27 @@ function _M.check(self, ip)
       ngx.req.set_header('X-Foxsec-IP-Reputation-Below-Threshold', 'true')
       ngx.req.set_header('X-Foxsec-Block', 'true')
       if self.statsd then
-        self.statsd.incr("iprepd.status.rejected")
+        self.statsd.incr("iprepd.status.below_threshold")
       end
 
       if self.dont_block == 1 then
-        ngx.log(ngx.ERR, '[logonly] ' .. ip .. ' rejected with a reputation of ' .. reputation)
+        ngx.log(ngx.ERR, ip .. ' is below threshold with a reputation of ' .. reputation)
       else
         ngx.log(ngx.ERR, ip .. ' rejected with a reputation of ' .. reputation)
+        if self.statsd then
+          self.statsd.incr("iprepd.status.rejected")
+        end
         ngx.exit(ngx.HTTP_FORBIDDEN)
       end
+    else
+      if self.statsd then
+        self.statsd.incr("iprepd.status.accepted")
+      end
     end
+
+    return
   end
 
-  ngx.req.set_header('X-Foxsec-IP-Reputation-Below-Threshold', 'false')
-  ngx.req.set_header('X-Foxsec-Block', 'false')
   if self.statsd then
     self.statsd.incr("iprepd.status.accepted")
   end
@@ -125,6 +134,9 @@ function _M.get_reputation(self, ip)
       self.cache:set(ip, 100, self.cache_ttl)
     else
       ngx.log(ngx.ERR, 'iprepd responded with a ' .. resp.status .. ' http status code')
+      if self.statsd then
+        self.statsd.incr("iprepd.err." .. resp.status)
+      end
       if self.cache_errors == 1 then
         ngx.log(ngx.ERR, 'cache_errors is enabled, setting reputation of ' .. ip .. ' to 100 within the cache')
         self.cache:set(ip, 100, self.cache_ttl)
