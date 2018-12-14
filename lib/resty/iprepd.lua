@@ -122,8 +122,8 @@ function _M.get_reputation(self, ip)
       headers = self.api_key_hdr,
     })
     if err then
-      if self.statsd and err == "timeout" then
-        self.statsd.incr("iprepd.err.timeout")
+      if self.statsd then
+        self.statsd.incr("iprepd.err." .. err)
       end
       ngx.log(ngx.ERR, 'Error with request to iprepd: ' .. err)
       return nil
