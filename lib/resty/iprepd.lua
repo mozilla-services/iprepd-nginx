@@ -56,6 +56,7 @@ function _M.new(options)
     statsd_max_buffer_count =  options.statsd_max_buffer_count or 100,
     statsd_flush_timer = options.statsd_flush_timer or 5,
     dont_block = options.dont_block or 0,
+    verbose = options.verbose or 0,
     whitelist = whitelist,
   }
 
@@ -63,16 +64,20 @@ function _M.new(options)
 end
 
 function _M.check(self, ip)
+  self:debug_log("Checking " .. ip)
   ngx.req.set_header('X-Foxsec-IP-Reputation-Below-Threshold', 'false')
   ngx.req.set_header('X-Foxsec-Block', 'false')
   if self.whitelist then
     if iputils.ip_in_cidrs(ip, self.whitelist) then
+      self:debug_log(ip .. " in whitelist")
       return
     end
   end
 
+
   local reputation = self:get_reputation(ip)
   if reputation then
+    self:debug_log("Got reputation of " .. reputation .. " for " .. ip)
     ngx.req.set_header('X-Foxsec-IP-Reputation', tostring(reputation))
     if reputation <= self.threshold then
       ngx.req.set_header('X-Foxsec-IP-Reputation-Below-Threshold', 'true')
@@ -91,6 +96,7 @@ function _M.check(self, ip)
         ngx.exit(ngx.HTTP_FORBIDDEN)
       end
     else
+      self:debug_log(ip .. " accepted")
       if self.statsd then
         self.statsd.incr("iprepd.status.accepted")
       end
@@ -99,6 +105,7 @@ function _M.check(self, ip)
     return
   end
 
+  self:debug_log(ip .. " accepted")
   if self.statsd then
     self.statsd.incr("iprepd.status.accepted")
   end
@@ -125,23 +132,25 @@ function _M.get_reputation(self, ip)
     -- If the IP was found
     if resp.status == 200 then
       reputation = cjson.decode(resp.body)['reputation']
-      if reputation and reputation >= 0 and reputation <= 100 then
-        self.cache:set(ip, reputation, self.cache_ttl)
-      else
+      if not reputation then
         ngx.log(ngx.ERR, 'Unable to parse `reputation` value from response body')
       end
     elseif resp.status == 404 then
-      self.cache:set(ip, 100, self.cache_ttl)
+      reputation = 100
     else
       ngx.log(ngx.ERR, 'iprepd responded with a ' .. resp.status .. ' http status code')
       if self.statsd then
         self.statsd.incr("iprepd.err." .. resp.status)
       end
       if self.cache_errors == 1 then
-        ngx.log(ngx.ERR, 'cache_errors is enabled, setting reputation of ' .. ip .. ' to 100 within the cache')
-        self.cache:set(ip, 100, self.cache_ttl)
+        reputation = 100
+        self:debug_log('cache_errors is enabled, setting reputation of ' .. ip .. ' to 100 within the cache')
       end
     end
+  end
+
+  if reputation and reputation >= 0 and reputation <= 100 then
+    self.cache:set(ip, reputation, self.cache_ttl)
   end
 
   return reputation
@@ -161,6 +170,12 @@ end
 
 function _M.config_flush_timer(self)
   ngx.timer.every(self.statsd_flush_timer, self.async_flush_stats, self)
+end
+
+function _M.debug_log(self, msg)
+  if self.verbose == 1 then
+    ngx.log(ngx.ERR, "[verbose] " .. msg)
+  end
 end
 
 return _M

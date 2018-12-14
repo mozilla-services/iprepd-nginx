@@ -35,6 +35,7 @@ init_by_lua_block {
     statsd_max_buffer_count = tonumber(os.getenv("STATSD_MAX_BUFFER_COUNT")) or 100,
     statsd_flush_timer = tonumber(os.getenv("STATSD_FLUSH_TIMER")) or 5,
     dont_block = tonumber(os.getenv("DONT_BLOCK")) or 0,
+    verbose = tonumber(os.getenv("VERBOSE")) or 0,
     whitelist = {},
   })
 }
@@ -116,7 +117,11 @@ violations for your environment.
 --    statsd_max_buffer_count - Max number of metrics in buffer before metrics should be submitted
 --                              to statsd (defaults to 100)
 --    statsd_flush_timer - Interval for attempting to flush the stats in seconds. (defaults to 5)
---    dont_block - Enables (1) or disables (0) not blocking within nginx by returning a 403. (defaults to disabled)
+--    dont_block - Enables (1) or disables (0) not blocking within nginx by returning
+--                 a 403. (defaults to disabled)
+--    verbose - Enables (1) or disables (0) verbose logging. Messages are logged with a
+--              severity of "ERROR" so that nginx log levels do not need to be changed. (defaults
+--              to disabled)
 --    whitelist - List of whitelisted IP's and IP CIDR's. (defaults to empty)
 --
 client = require("resty.iprepd").new({
@@ -132,6 +137,7 @@ client = require("resty.iprepd").new({
   statsd_max_buffer_count = 100,
   statsd_flush_timer = 10,
   dont_block = 0,
+  verbose = 0,
   whitelist = {"127.0.0.1", "10.10.10.0/24", "192.168.0.0/16"}
 })
 ```
