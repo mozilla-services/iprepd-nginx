@@ -27,7 +27,7 @@ operator, but only to a certain extend (discussed further below).
 
 ## Architecture Diagram
 
-TODO
+![Architecture Diagram](docs/moz-architecture-diagram.png)
 
 ## Installation
 
@@ -191,7 +191,7 @@ server {
 
 ## Running locally
 
-Create a `.env` file in this repo with the needed environment variables (documentaion below).
+Create a `.env` file in this repo with the needed environment variables (documentation below).
 
 Then run:
 ```
