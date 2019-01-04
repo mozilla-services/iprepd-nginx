@@ -23,7 +23,7 @@ These three headers are:
 | X-Foxsec-Block | boolean ('true'/'false') | High-level whether the request should be blocked (subject to change on what this means) |
 
 As well, `iprepd-nginx` is designed to fail open and prefer performance to accuracy. The preference of performance to accuracy can be changed a bit as an
-operator, but only to a certain extend (discussed further below).
+operator, but only to a certain extent (discussed further below).
 
 ## (Mozilla-specific) Architecture Diagram
 
@@ -43,7 +43,7 @@ opm get mozilla-services/iprepd-nginx
 
 * [iprepd](https://github.com/mozilla-services/iprepd), preferably near your `iprepd-nginx` servers (e.g. within the same region in AWS or GCP)
 * A mechanism for updating iprepd. At Mozilla, this is done by feeding logs from your load balancer, application server, and potentially other locations into our [fraud detection pipeline](https://github.com/mozilla-services/foxsec-pipeline).
-* (optional) A mechanism for collection statsd metrics.
+* (optional) A mechanism for collecting statsd metrics.
 
 ### Note on Performance
 
