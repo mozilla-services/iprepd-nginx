@@ -56,50 +56,50 @@ violations for your environment.
 #### Example
 
 ```lua
-	-- Parameters within options:
-	--  Required parameters:
-	--    api_key - An active API key for authenticating to iprepd
-	--    threshold - The reputation threshold, where IP's with a reputation below this number will
-	--                be blocked. There is no default for this, as it will be application specific,
-	--                but as described above 50 is a good starting place.
-	--
-	--  Optional parameters:
-	--    url - The base URL to iprepd (defaults to "http://localhost:8080/")
-	--    timeout - The timeout for making requests to iprepd in milliseconds (defaults to 10)
-	--    cache_ttl - The iprepd response cache ttl in seconds (defaults to 30)
-	--    cache_buffer_count - Max number of entries allowed in the cache. (defaults to 200)
-	--    cache_errors - Enables (1) or disables (0) caching errors. Caching errors is a good
-	--                   idea in production, as it can reduce the average additional latency
-	--                   caused by this module if anything goes wrong with the underlying
-	--                   infrastructure. (defaults to disabled)
-	--    statsd_host - Host of statsd collector. Setting this will enable statsd metrics collection
-	--    statsd_port - Port of statsd collector. (defaults to 8125)
-	--    statsd_max_buffer_count - Max number of metrics in buffer before metrics should be submitted
-	--                              to statsd (defaults to 100)
-	--    statsd_flush_timer - Interval for attempting to flush the stats in seconds. (defaults to 5)
-	--    dont_block - Enables (1) or disables (0) not blocking within nginx by returning
-	--                 a 403. (defaults to disabled)
-	--    verbose - Enables (1) or disables (0) verbose logging. Messages are logged with a
-	--              severity of "ERROR" so that nginx log levels do not need to be changed. (defaults
-	--              to disabled)
-	--    whitelist - List of whitelisted IP's and IP CIDR's. (defaults to empty)
-	--
-	client = require("resty.iprepd").new({
-		api_key = os.getenv("IPREPD_API_KEY"),
-		threshold = 50,
-		url = "http://127.0.0.1:8080",
-		timeout = 10,
-		cache_ttl = 30,
-		cache_buffer_count = 1000,
-		cache_errors = 1,
-		statsd_host = "127.0.0.1",
-		statsd_port = 8125,
-		statsd_max_buffer_count = 100,
-		statsd_flush_timer = 10,
-		dont_block = 0,
-		verbose = 0,
-		whitelist = {"127.0.0.1", "10.10.10.0/24", "192.168.0.0/16"}
-	})
+-- Parameters within options:
+--  Required parameters:
+--    api_key - An active API key for authenticating to iprepd
+--    threshold - The reputation threshold, where IP's with a reputation below this number will
+--                be blocked. There is no default for this, as it will be application specific,
+--                but as described above 50 is a good starting place.
+--
+--  Optional parameters:
+--    url - The base URL to iprepd (defaults to "http://localhost:8080/")
+--    timeout - The timeout for making requests to iprepd in milliseconds (defaults to 10)
+--    cache_ttl - The iprepd response cache ttl in seconds (defaults to 30)
+--    cache_buffer_count - Max number of entries allowed in the cache. (defaults to 200)
+--    cache_errors - Enables (1) or disables (0) caching errors. Caching errors is a good
+--                   idea in production, as it can reduce the average additional latency
+--                   caused by this module if anything goes wrong with the underlying
+--                   infrastructure. (defaults to disabled)
+--    statsd_host - Host of statsd collector. Setting this will enable statsd metrics collection
+--    statsd_port - Port of statsd collector. (defaults to 8125)
+--    statsd_max_buffer_count - Max number of metrics in buffer before metrics should be submitted
+--                              to statsd (defaults to 100)
+--    statsd_flush_timer - Interval for attempting to flush the stats in seconds. (defaults to 5)
+--    dont_block - Enables (1) or disables (0) not blocking within nginx by returning
+--                 a 403. (defaults to disabled)
+--    verbose - Enables (1) or disables (0) verbose logging. Messages are logged with a
+--              severity of "ERROR" so that nginx log levels do not need to be changed. (defaults
+--              to disabled)
+--    whitelist - List of whitelisted IP's and IP CIDR's. (defaults to empty)
+--
+client = require("resty.iprepd").new({
+  api_key = os.getenv("IPREPD_API_KEY"),
+  threshold = 50,
+  url = "http://127.0.0.1:8080",
+  timeout = 10,
+  cache_ttl = 30,
+  cache_buffer_count = 1000,
+  cache_errors = 1,
+  statsd_host = "127.0.0.1",
+  statsd_port = 8125,
+  statsd_max_buffer_count = 100,
+  statsd_flush_timer = 10,
+  dont_block = 0,
+  verbose = 0,
+  whitelist = {"127.0.0.1", "10.10.10.0/24", "192.168.0.0/16"}
+})
 ```
 
 ### Metrics (statsd)
@@ -119,11 +119,62 @@ violations for your environment.
 
 #### Setting up custom metrics
 
+You can use `client.statsd` (where `client = require("resty.iprepd").new({...})`) to submit your
+own custom metrics. Do note that there is no prefix, so it will act as any other statsd client.
+
+##### Available statsd functions
+
+```lua
+client = require("resty.iprepd").new({...})
+
+client.statsd.count(name, value)
+client.statsd.incr(name) # Increments a count by 1
+client.statsd.time(name, value)
+client.statsd.set(name, value)
+```
+
+##### Example within nginx config
+```
+init_by_lua_block {
+  client = require("resty.iprepd").new({
+    url = os.getenv("IPREPD_URL"),
+    api_key = os.getenv("IPREPD_API_KEY"),
+    statsd_host = os.getenv("STATSD_HOST"),
+  })
+}
+
+init_worker_by_lua_block {
+  # async flushing of metrics
+  client:config_flush_timer()
+}
+
+server {
+  ...
+
+  location / {
+    ...
+
+    access_by_lua_block {
+      client:check(ngx.var.remote_addr)
+    }
+
+    log_by_lua_block {
+      # This conditional is not required, but can be helpful to not cause problems
+      # if you want to temporarily disable statsd. This will evaluate to false if
+      # `statsd_host` is not set.
+      if client.statsd then
+        # Here is our custom metric
+        client.statsd.set("iprepd.ips_seen", ngx.var.remote_addr)
+      end
+    }
+  }
+}
+```
+
 ### Common Gotchas
 
 * Make sure iprepd-nginx is seeing the real client IP. You will usually need to use something like [ngx_http_realip_module](https://nginx.org/en/docs/http/ngx_http_realip_module.html), and confirm that it is configured correctly.
 
----
 
 ## Running locally
 
