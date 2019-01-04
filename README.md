@@ -10,7 +10,20 @@ and integrate it yourself.
 
 ## What exactly does iprepd-nginx do?
 
-TODO
+By using the `iprepd` client in `iprepd-nginx`, you can configure nginx to check the reputation of an incoming client IP within `iprepd`. With
+this reputation, `iprepd-nginx` will attach up to three HTTP headers on the request that is then forwarded to your application and can reject
+requests that are below the configured threshold.
+
+These three headers are:
+
+| Header | Values | Description |
+|---|---|---|
+| X-Foxsec-IP-Reputation | int (0-100) | Reputation score returned by iprepd |
+| X-Foxsec-IP-Reputation-Below-Threshold | boolean ('true'/'false') | Whether the reputation is below the configured threshold |
+| X-Foxsec-Block | boolean ('true'/'false') | High-level whether the request should be blocked (subject to change on what this means) |
+
+As well, `iprepd-nginx` is designed to fail open and prefer performance to accuracy. The preference of performance to accuracy can be changed a bit as an
+operator, but only to a certain extend (discussed further below).
 
 ## Architecture Diagram
 
