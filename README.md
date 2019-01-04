@@ -25,7 +25,7 @@ These three headers are:
 As well, `iprepd-nginx` is designed to fail open and prefer performance to accuracy. The preference of performance to accuracy can be changed a bit as an
 operator, but only to a certain extend (discussed further below).
 
-## Architecture Diagram
+## (Mozilla-specific) Architecture Diagram
 
 ![Architecture Diagram](docs/moz-architecture-diagram.png)
 
@@ -41,7 +41,9 @@ opm get mozilla-services/iprepd-nginx
 
 ### Prerequisites
 
-TODO
+* [iprepd](https://github.com/mozilla-services/iprepd), preferably near your `iprepd-nginx` servers (e.g. within the same region in AWS or GCP)
+* A mechanism for updating iprepd. At Mozilla, this is done by feeding logs from your load balancer, application server, and potentially other locations into our [fraud detection pipeline](https://github.com/mozilla-services/foxsec-pipeline).
+* (optional) A mechanism for collection statsd metrics.
 
 ### Note on Performance
 
