@@ -8,6 +8,26 @@ and integrate it yourself.
 *Note:* If nginx is behind a load balancer, make sure to use something like
 [ngx_http_realip_module](https://nginx.org/en/docs/http/ngx_http_realip_module.html).
 
+## What exactly does iprepd-nginx do?
+
+By using the `iprepd` client in `iprepd-nginx`, you can configure nginx to check the reputation of an incoming client IP within `iprepd`. With
+this reputation, `iprepd-nginx` will attach up to three HTTP headers on the request that is then forwarded to your application and can reject
+requests that are below the configured threshold.
+
+These three headers are:
+
+| Header | Values | Description |
+|---|---|---|
+| X-Foxsec-IP-Reputation | int (0-100) | Reputation score returned by iprepd |
+| X-Foxsec-IP-Reputation-Below-Threshold | boolean ('true'/'false') | Whether the reputation is below the configured threshold |
+| X-Foxsec-Block | boolean ('true'/'false') | High-level whether the request should be blocked (subject to change on what this means) |
+
+As well, `iprepd-nginx` is designed to fail open and prefer performance to accuracy. The preference of performance to accuracy can be changed a bit as an
+operator, but only to a certain extent (discussed further below).
+
+## (Mozilla-specific) Architecture Diagram
+
+![Architecture Diagram](docs/moz-architecture-diagram.png)
 
 ## Installation
 
@@ -17,68 +37,23 @@ Install using [opm](https://github.com/openresty/opm)
 opm get mozilla-services/iprepd-nginx
 ```
 
-## Example
+## Operators Guide
 
-Note: Check out `/etc` in this repo for a working example.
+### Prerequisites
 
-```
-init_by_lua_block {
-  client = require("resty.iprepd").new({
-    url = os.getenv("IPREPD_URL"),
-    api_key = os.getenv("IPREPD_API_KEY"),
-    threshold = tonumber(os.getenv("IPREPD_REPUTATION_THRESHOLD")),
-    cache_ttl = os.getenv("IPREPD_CACHE_TTL"),
-    timeout = tonumber(os.getenv("IPREPD_TIMEOUT")) or 10,
-    cache_errors = tonumber(os.getenv("IPREPD_CACHE_ERRORS")),
-    statsd_host = os.getenv("STATSD_HOST") or nil,
-    statsd_port = tonumber(os.getenv("STATSD_PORT")) or 8125,
-    statsd_max_buffer_count = tonumber(os.getenv("STATSD_MAX_BUFFER_COUNT")) or 100,
-    statsd_flush_timer = tonumber(os.getenv("STATSD_FLUSH_TIMER")) or 5,
-    dont_block = tonumber(os.getenv("DONT_BLOCK")) or 0,
-    verbose = tonumber(os.getenv("VERBOSE")) or 0,
-    whitelist = {},
-  })
-}
+* [iprepd](https://github.com/mozilla-services/iprepd), preferably near your `iprepd-nginx` servers (e.g. within the same region in AWS or GCP)
+* A mechanism for updating iprepd. At Mozilla, this is done by feeding logs from your load balancer, application server, and potentially other locations into our [fraud detection pipeline](https://github.com/mozilla-services/foxsec-pipeline).
+* (optional) A mechanism for collecting statsd metrics.
 
-init_worker_by_lua_block {
-  client:config_flush_timer()
-}
+### Note on Performance
 
-server {
-  listen       80;
-  root         /dev/null;
-  error_page   500 502 503 504  /50x.html;
+A core requirement for iprepd-nginx is that it will add no more than 10ms of latency to requests. Of the mechanisms in place to accomplish this, as an operator there are a few you should be aware of:
 
-  location = /50x.html {
-    root  /usr/local/openresty/nginx/html/;
-  }
+#### Heavy use of caching of responses from iprepd
+By default, iprepd-nginx will cache all non-error responses from iprepd for 30 seconds. It is a good idea to cache errors in production, which is done by enabling `cache_errors` (discussed further below). As well, you may want to lengthen the cache ttl.
 
-  location = /health {
-    return 200;
-    access_log off;
-  }
-
-  set_by_lua_block $backend { return os.getenv("backend") }
-
-  location / {
-    proxy_set_header "X-Forwarded-Port" $server_port;
-    proxy_set_header "X-Forwarded-For" $proxy_add_x_forwarded_for;
-    proxy_set_header "X-Real-IP" $remote_addr;
-    proxy_set_header "Host" $host;
-    proxy_pass $backend;
-
-    access_by_lua_block {
-      client:check(ngx.var.remote_addr)
-    }
-
-    log_by_lua_block {
-      if client.statsd then
-        client.statsd.set("iprepd.ips_seen", ngx.var.remote_addr)
-      end
-    }
-  }
-}
-```
+#### Strict timeouts to iprepd
+By default, iprepd-nginx’s request to iprepd will timeout after 10ms. This should not be increased in production, and may be worth reducing if the network design can support it.
 
 ### Configuration of the client
 
@@ -142,9 +117,83 @@ client = require("resty.iprepd").new({
 })
 ```
 
+### Metrics (statsd)
+
+#### Metrics that are collected
+
+| name | type | description |
+|---|---|---|
+| iprepd.status.below_threshold | count | The reputation for the client ip is below the configured threshold. |
+| iprepd.status.rejected | count | The request was blocked (won’t be sent if `dont_block` is enabled). |
+| iprepd.status.accepted | count | The reputation for the client ip is above the configured threshold and was accepted. |
+| iprepd.err.timeout | count | Request to iprepd timed out |
+| iprepd.err.500 | count | Got a 500 response from iprepd |
+| iprepd.err.401 | count | Got a 401 response from iprepd, usually means the API key in use is invalid or being sent incorrectly by nginx. |
+| iprepd.err.* | count | Got an error while sending a request to iprepd. This could be other 4xx or 5xx status codes for example. |
+
+
+#### Setting up custom metrics
+
+You can use `client.statsd` (where `client = require("resty.iprepd").new({...})`) to submit your
+own custom metrics. Do note that there is no prefix, so it will act as any other statsd client.
+
+##### Available statsd functions
+
+```lua
+client = require("resty.iprepd").new({...})
+
+client.statsd.count(name, value)
+client.statsd.incr(name) # Increments a count by 1
+client.statsd.time(name, value)
+client.statsd.set(name, value)
+```
+
+##### Example within nginx config
+```
+init_by_lua_block {
+  client = require("resty.iprepd").new({
+    url = os.getenv("IPREPD_URL"),
+    api_key = os.getenv("IPREPD_API_KEY"),
+    statsd_host = os.getenv("STATSD_HOST"),
+  })
+}
+
+init_worker_by_lua_block {
+  # async flushing of metrics
+  client:config_flush_timer()
+}
+
+server {
+  ...
+
+  location / {
+    ...
+
+    access_by_lua_block {
+      client:check(ngx.var.remote_addr)
+    }
+
+    log_by_lua_block {
+      # This conditional is not required, but can be helpful to not cause problems
+      # if you want to temporarily disable statsd. This will evaluate to false if
+      # `statsd_host` is not set.
+      if client.statsd then
+        # Here is our custom metric
+        client.statsd.set("iprepd.ips_seen", ngx.var.remote_addr)
+      end
+    }
+  }
+}
+```
+
+### Common Gotchas
+
+* Make sure iprepd-nginx is seeing the real client IP. You will usually need to use something like [ngx_http_realip_module](https://nginx.org/en/docs/http/ngx_http_realip_module.html), and confirm that it is configured correctly.
+
+
 ## Running locally
 
-Create a `.env` file in this repo with the needed environment variables (documentaion below).
+Create a `.env` file in this repo with the needed environment variables (documentation below).
 
 Then run:
 ```
