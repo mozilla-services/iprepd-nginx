@@ -95,7 +95,6 @@ function _M.check(self, ip)
         end
         ngx.exit(ngx.HTTP_FORBIDDEN)
       end
-
     end
   end
 
@@ -115,6 +114,7 @@ function _M.get_reputation(self, ip)
       method  = "GET",
       headers = self.api_key_hdr,
     })
+    self.statsd.incr("iprepd.get_reputation")
     if err then
       if self.statsd then
         self.statsd.incr("iprepd.err." .. err)
