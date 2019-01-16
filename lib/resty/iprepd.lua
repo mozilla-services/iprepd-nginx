@@ -117,7 +117,13 @@ function _M.get_reputation(self, ip)
     self.statsd.incr("iprepd.get_reputation")
     if err then
       if self.statsd then
-        self.statsd.incr("iprepd.err." .. err)
+        if string.find(err, " ") then
+          if string.find(err, "could not be resolved") and string.find(err, "Operation timed out") then
+            self.statsd.incr("iprepd.err.dns_timeout")
+          end
+        else
+          self.statsd.incr("iprepd.err." .. err)
+        end
       end
       ngx.log(ngx.ERR, string.format("Error with request to iprepd: %s", err))
       return nil
