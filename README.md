@@ -130,6 +130,7 @@ client = require("resty.iprepd").new({
 | iprepd.err.timeout | count | Request to iprepd timed out |
 | iprepd.err.500 | count | Got a 500 response from iprepd |
 | iprepd.err.401 | count | Got a 401 response from iprepd, usually means the API key in use is invalid or being sent incorrectly by nginx. |
+| iprepd.err.dns_timeout | count | DNS resolution of the iprepd URL's domain name timed out. Make sure to check nginx's [resolver_timeout](https://nginx.org/en/docs/http/ngx_http_core_module.html#resolver_timeout) setting |
 | iprepd.err.* | count | Got an error while sending a request to iprepd. This could be other 4xx or 5xx status codes for example. |
 
 
