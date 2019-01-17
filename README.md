@@ -92,8 +92,8 @@ violations for your environment.
 --    statsd_max_buffer_count - Max number of metrics in buffer before metrics should be submitted
 --                              to statsd (defaults to 100)
 --    statsd_flush_timer - Interval for attempting to flush the stats in seconds. (defaults to 5)
---    dont_block - Enables (1) or disables (0) not blocking within nginx by returning
---                 a 403. (defaults to disabled)
+--    blocking_mode - Enables (1) or disables (0) blocking within nginx by returning a
+--                    403. (defaults to disabled)
 --    verbose - Enables (1) or disables (0) verbose logging. Messages are logged with a
 --              severity of "ERROR" so that nginx log levels do not need to be changed. (defaults
 --              to disabled)
@@ -111,7 +111,7 @@ client = require("resty.iprepd").new({
   statsd_port = 8125,
   statsd_max_buffer_count = 100,
   statsd_flush_timer = 10,
-  dont_block = 0,
+  blocking_mode = 0,
   verbose = 0,
   whitelist = {"127.0.0.1", "10.10.10.0/24", "192.168.0.0/16"}
 })
@@ -124,11 +124,13 @@ client = require("resty.iprepd").new({
 | name | type | description |
 |---|---|---|
 | iprepd.status.below_threshold | count | The reputation for the client ip is below the configured threshold. |
-| iprepd.status.rejected | count | The request was blocked (won’t be sent if `dont_block` is enabled). |
-| iprepd.status.accepted | count | The reputation for the client ip is above the configured threshold and was accepted. |
+| iprepd.status.rejected | count | The request was blocked (won’t be sent if `blocking_mode` is disabled). |
+| iprepd.status.accepted | count | The request was accepted. The reputation can still be below the threshold if `blocking_mode` is disabled.
+| iprepd.get_reputation | count | Request to iprepd |
 | iprepd.err.timeout | count | Request to iprepd timed out |
 | iprepd.err.500 | count | Got a 500 response from iprepd |
 | iprepd.err.401 | count | Got a 401 response from iprepd, usually means the API key in use is invalid or being sent incorrectly by nginx. |
+| iprepd.err.dns_timeout | count | DNS resolution of the iprepd URL's domain name timed out. Make sure to check nginx's [resolver_timeout](https://nginx.org/en/docs/http/ngx_http_core_module.html#resolver_timeout) setting |
 | iprepd.err.* | count | Got an error while sending a request to iprepd. This could be other 4xx or 5xx status codes for example. |
 
 
@@ -226,5 +228,5 @@ STATSD_HOST=127.0.0.1
 STATSD_PORT=8125
 STATSD_MAX_BUFFER_COUNT=200
 STATSD_FLUSH_TIMER=2
-DONT_BLOCK=0
+BLOCKING_MODE=0
 ```

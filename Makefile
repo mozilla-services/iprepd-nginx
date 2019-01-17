@@ -1,7 +1,7 @@
 IMAGE_NAME	:= "iprepd-nginx"
 
 build: Dockerfile
-	docker build -t $(IMAGE_NAME) .
+	docker build --no-cache -t $(IMAGE_NAME) .
 
 run_dev: Dockerfile
 	docker run \

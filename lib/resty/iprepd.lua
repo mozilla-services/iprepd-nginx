@@ -55,7 +55,7 @@ function _M.new(options)
     statsd_port = options.statsd_port or 8125,
     statsd_max_buffer_count =  options.statsd_max_buffer_count or 100,
     statsd_flush_timer = options.statsd_flush_timer or 5,
-    dont_block = options.dont_block or 0,
+    blocking_mode = options.blocking_mode or 0,
     verbose = options.verbose or 0,
     whitelist = whitelist,
   }
@@ -86,7 +86,7 @@ function _M.check(self, ip)
         self.statsd.incr("iprepd.status.below_threshold")
       end
 
-      if self.dont_block == 1 then
+      if self.blocking_mode == 0 then
         ngx.log(ngx.ERR, string.format("%s is below threshold with a reputation of %d", ip, reputation))
       else
         ngx.log(ngx.ERR, string.format("%s rejected with a reputation of %d", ip, reputation))
@@ -95,8 +95,6 @@ function _M.check(self, ip)
         end
         ngx.exit(ngx.HTTP_FORBIDDEN)
       end
-
-      return
     end
   end
 
@@ -116,9 +114,18 @@ function _M.get_reputation(self, ip)
       method  = "GET",
       headers = self.api_key_hdr,
     })
+    self.statsd.incr("iprepd.get_reputation")
     if err then
       if self.statsd then
-        self.statsd.incr("iprepd.err." .. err)
+        if string.find(err, " ") then
+          if string.find(err, "could not be resolved") and string.find(err, "Operation timed out") then
+            self.statsd.incr("iprepd.err.dns_timeout")
+          else
+            ngx.log(ngx.ERR, string.format("Could not send metric with error: %s", err))
+          end
+        else
+          self.statsd.incr("iprepd.err." .. err)
+        end
       end
       ngx.log(ngx.ERR, string.format("Error with request to iprepd: %s", err))
       return nil
