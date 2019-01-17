@@ -120,6 +120,8 @@ function _M.get_reputation(self, ip)
         if string.find(err, " ") then
           if string.find(err, "could not be resolved") and string.find(err, "Operation timed out") then
             self.statsd.incr("iprepd.err.dns_timeout")
+          else
+            ngx.log(ngx.ERR, string.format("Could not send metric with error: %s", err))
           end
         else
           self.statsd.incr("iprepd.err." .. err)
