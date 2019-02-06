@@ -44,8 +44,9 @@ function _M.new(options)
     url = iprepd_url,
     timeout = options.timeout or 10,
     threshold = iprepd_threshold,
-    api_key_hdr = {
+    iprepd_hdrs = {
       ['Authorization'] = string.format('APIKey %s', iprepd_api_key),
+      ['Connection'] = 'keep-alive',
     },
     cache = cache,
     cache_ttl = options.cache_ttl or 60,
@@ -112,7 +113,7 @@ function _M.get_reputation(self, ip)
     httpc:set_timeout(self.timeout)
     local resp, err = httpc:request_uri(string.format("%s/%s", self.url, ip), {
       method  = "GET",
-      headers = self.api_key_hdr,
+      headers = self.iprepd_hdrs,
     })
     self.statsd.incr("iprepd.get_reputation")
     if err then
