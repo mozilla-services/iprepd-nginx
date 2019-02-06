@@ -46,7 +46,7 @@ function _M.new(options)
   if not ok then
     fatal_error(ngx.ERR, string.format("failed to initialize http client: %s", (err or 'unknown')))
   end
-  self:debug_log(string.format("http client initialized with timeout %d max idle timeout %s pool size %d",
+  self:debug_log(string.format("http client initialized with timeout %d; max idle timeout %d; pool size %d",
       self.timeout, self.http_max_idle_timeout, self.http_pool_size))
   
   local self = {
