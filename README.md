@@ -127,6 +127,7 @@ client = require("resty.iprepd").new({
 | iprepd.status.rejected | count | The request was blocked (won’t be sent if `blocking_mode` is disabled). |
 | iprepd.status.accepted | count | The request was accepted. The reputation can still be below the threshold if `blocking_mode` is disabled.
 | iprepd.get_reputation | count | Request to iprepd |
+| iprepd.cache_hit | count | Got reputation from internal cache |
 | iprepd.err.timeout | count | Request to iprepd timed out |
 | iprepd.err.500 | count | Got a 500 response from iprepd |
 | iprepd.err.401 | count | Got a 401 response from iprepd, usually means the API key in use is invalid or being sent incorrectly by nginx. |
