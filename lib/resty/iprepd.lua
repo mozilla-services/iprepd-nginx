@@ -40,7 +40,17 @@ function _M.new(options)
     whitelist = iputils.parse_cidrs(whitelist_list)
   end
 
+  local httpc = http.new()
+  httpc:set_timeout(self.timeout, self.timeout, self.timeout)
+  ok, err = httpc:set_keepalive((self.http_max_idle_timeout or 120), (self.http_pool_size or 10))
+  if not ok then
+    fatal_error(ngx.ERR, string.format("failed to initialize http client: %s", (err or 'unknown')))
+  end
+  self:debug_log(string.format("http client initialized with timeout %d max idle timeout %s pool size %d",
+      self.timeout, self.http_max_idle_timeout, self.http_pool_size))
+  
   local self = {
+    httpc = httpc,
     url = iprepd_url,
     timeout = options.timeout or 10,
     threshold = iprepd_threshold,
@@ -108,9 +118,7 @@ function _M.get_reputation(self, ip)
   local reputation = self.cache:get(ip)
 
   if not reputation then
-    local httpc = http.new()
-    httpc:set_timeout(self.timeout)
-    local resp, err = httpc:request_uri(string.format("%s/%s", self.url, ip), {
+    local resp, err = self.httpc:request_uri(string.format("%s/%s", self.url, ip), {
       method  = "GET",
       headers = self.api_key_hdr,
     })
