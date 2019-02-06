@@ -40,14 +40,17 @@ function _M.new(options)
     whitelist = iputils.parse_cidrs(whitelist_list)
   end
 
+  --[[ Initialize an http client with a timeout of 50ms by default
+       that is set to keepalive and stay idle for up to 2 minutes.
+       Each nginx worker will keep up to 10 of these clients in its pool. ]]
   local httpc = http.new()
-  httpc:set_timeout(self.timeout, self.timeout, self.timeout)
-  ok, err = httpc:set_keepalive((self.http_max_idle_timeout or 120), (self.http_pool_size or 10))
+  httpc:set_timeout((options.timeout or 50), (options.timeout or 50), (options.timeout or 50))
+  ok, err = httpc:set_keepalive((options.http_max_idle_timeout or 120000), (options.http_pool_size or 10))
   if not ok then
     fatal_error(ngx.ERR, string.format("failed to initialize http client: %s", (err or 'unknown')))
   end
   self:debug_log(string.format("http client initialized with timeout %d; max idle timeout %d; pool size %d",
-      self.timeout, self.http_max_idle_timeout, self.http_pool_size))
+      options.timeout, options.http_max_idle_timeout, options.http_pool_size))
   
   local self = {
     httpc = httpc,
