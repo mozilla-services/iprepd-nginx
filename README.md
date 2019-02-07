@@ -87,6 +87,7 @@ violations for your environment.
 --                   idea in production, as it can reduce the average additional latency
 --                   caused by this module if anything goes wrong with the underlying
 --                   infrastructure. (defaults to disabled)
+--    cache_errors_ttl - The iprepd response cache ttl for error responses (not 200 or 404) in seconds (defaults to 10)
 --    statsd_host - Host of statsd collector. Setting this will enable statsd metrics collection
 --    statsd_port - Port of statsd collector. (defaults to 8125)
 --    statsd_max_buffer_count - Max number of metrics in buffer before metrics should be submitted
@@ -107,6 +108,7 @@ client = require("resty.iprepd").new({
   cache_ttl = 30,
   cache_buffer_count = 1000,
   cache_errors = 1,
+  cache_errors_ttl = 10,
   statsd_host = "127.0.0.1",
   statsd_port = 8125,
   statsd_max_buffer_count = 100,

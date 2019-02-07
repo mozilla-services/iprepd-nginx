@@ -51,6 +51,7 @@ function _M.new(options)
     cache = cache,
     cache_ttl = options.cache_ttl or 60,
     cache_errors = options.cache_errors or 0,
+    cache_errors_ttl = options.cache_errors_ttl or 10,
     statsd = statsd_client,
     statsd_host = options.statsd_host,
     statsd_port = options.statsd_port or 8125,
@@ -148,6 +149,8 @@ function _M.get_reputation(self, ip)
       if self.cache_errors == 1 then
         reputation = 100
         self:debug_log(string.format("cache_errors is enabled, setting reputation of %s to 100 within the cache", ip))
+        self.cache:set(ip, reputation, self.cache_errors_ttl)
+        return reputation
       end
     end
 
