@@ -19,7 +19,7 @@ function _M.new(options)
     iprepd_url = iprepd_url:sub(1, -2)
   end
 
-  local cache_buffer_count = options.cache_buffer_count or 200
+  local cache_buffer_count = options.cache_buffer_count or 5000
 
   local iprepd_threshold = options.threshold or fatal_error('Need to pass in a threshold')
   local iprepd_api_key = options.api_key or fatal_error('Need to pass in an api_key')
@@ -44,12 +44,14 @@ function _M.new(options)
     url = iprepd_url,
     timeout = options.timeout or 10,
     threshold = iprepd_threshold,
-    api_key_hdr = {
+    iprepd_hdrs = {
       ['Authorization'] = string.format('APIKey %s', iprepd_api_key),
+      ['Connection'] = 'keep-alive',
     },
     cache = cache,
-    cache_ttl = options.cache_ttl or 30,
+    cache_ttl = options.cache_ttl or 60,
     cache_errors = options.cache_errors or 0,
+    cache_errors_ttl = options.cache_errors_ttl or 10,
     statsd = statsd_client,
     statsd_host = options.statsd_host,
     statsd_port = options.statsd_port or 8125,
@@ -112,7 +114,7 @@ function _M.get_reputation(self, ip)
     httpc:set_timeout(self.timeout)
     local resp, err = httpc:request_uri(string.format("%s/%s", self.url, ip), {
       method  = "GET",
-      headers = self.api_key_hdr,
+      headers = self.iprepd_hdrs,
     })
     self.statsd.incr("iprepd.get_reputation")
     if err then
@@ -147,12 +149,16 @@ function _M.get_reputation(self, ip)
       if self.cache_errors == 1 then
         reputation = 100
         self:debug_log(string.format("cache_errors is enabled, setting reputation of %s to 100 within the cache", ip))
+        self.cache:set(ip, reputation, self.cache_errors_ttl)
+        return reputation
       end
     end
-  end
 
-  if reputation and reputation >= 0 and reputation <= 100 then
-    self.cache:set(ip, reputation, self.cache_ttl)
+    if reputation and reputation >= 0 and reputation <= 100 then
+      self.cache:set(ip, reputation, self.cache_ttl)
+    end
+  else
+    self.statsd.incr("iprepd.cache_hit")
   end
 
   return reputation

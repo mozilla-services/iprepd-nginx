@@ -81,12 +81,13 @@ violations for your environment.
 --  Optional parameters:
 --    url - The base URL to iprepd (defaults to "http://localhost:8080/")
 --    timeout - The timeout for making requests to iprepd in milliseconds (defaults to 10)
---    cache_ttl - The iprepd response cache ttl in seconds (defaults to 30)
---    cache_buffer_count - Max number of entries allowed in the cache. (defaults to 200)
+--    cache_ttl - The iprepd response cache ttl in seconds (defaults to 60)
+--    cache_buffer_count - Max number of entries allowed in the cache. (defaults to 5000)
 --    cache_errors - Enables (1) or disables (0) caching errors. Caching errors is a good
 --                   idea in production, as it can reduce the average additional latency
 --                   caused by this module if anything goes wrong with the underlying
 --                   infrastructure. (defaults to disabled)
+--    cache_errors_ttl - The iprepd response cache ttl for error responses (not 200 or 404) in seconds (defaults to 10)
 --    statsd_host - Host of statsd collector. Setting this will enable statsd metrics collection
 --    statsd_port - Port of statsd collector. (defaults to 8125)
 --    statsd_max_buffer_count - Max number of metrics in buffer before metrics should be submitted
@@ -107,6 +108,7 @@ client = require("resty.iprepd").new({
   cache_ttl = 30,
   cache_buffer_count = 1000,
   cache_errors = 1,
+  cache_errors_ttl = 10,
   statsd_host = "127.0.0.1",
   statsd_port = 8125,
   statsd_max_buffer_count = 100,
@@ -127,6 +129,7 @@ client = require("resty.iprepd").new({
 | iprepd.status.rejected | count | The request was blocked (won’t be sent if `blocking_mode` is disabled). |
 | iprepd.status.accepted | count | The request was accepted. The reputation can still be below the threshold if `blocking_mode` is disabled.
 | iprepd.get_reputation | count | Request to iprepd |
+| iprepd.cache_hit | count | Got reputation from internal cache |
 | iprepd.err.timeout | count | Request to iprepd timed out |
 | iprepd.err.500 | count | Got a 500 response from iprepd |
 | iprepd.err.401 | count | Got a 401 response from iprepd, usually means the API key in use is invalid or being sent incorrectly by nginx. |
