@@ -95,7 +95,8 @@ function _M.check(self, ip)
         if self.statsd then
           self.statsd.incr("iprepd.status.rejected")
         end
-        ngx.exit(ngx.HTTP_FORBIDDEN)
+        -- respond with a 429
+        ngx.exit(ngx.HTTP_TOO_MANY_REQUESTS)
       end
     end
   end
