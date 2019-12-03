@@ -201,7 +201,7 @@ function _M.audit_log(self, ip)
     if not data then
       data = ngx.req.get_body_file()
     end
-    ngx.log(ngx.ALERT, string.format('FoxSec Audit || "%s" || %s || "%s" ||', ip, request_headers_all, data))
+    ngx.log(ngx.ALERT, string.format('FoxSec Audit || "%s" || %s || "%s" || "%s" ||', ip, ngx.var.uri, request_headers_all, data))
   end
 end
 
