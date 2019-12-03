@@ -20,7 +20,6 @@ function _M.new(options)
   end
 
   local cache_buffer_count = options.cache_buffer_count or 5000
-
   local iprepd_threshold = options.threshold or fatal_error('Need to pass in a threshold')
   local iprepd_api_key = options.api_key or fatal_error('Need to pass in an api_key')
 
@@ -60,6 +59,7 @@ function _M.new(options)
     blocking_mode = options.blocking_mode or 0,
     verbose = options.verbose or 0,
     whitelist = whitelist,
+    audit_blocked_requests = options.audit_blocked_requests or 0,
   }
 
   return setmetatable(self, mt)
@@ -84,6 +84,8 @@ function _M.check(self, ip)
     if reputation <= self.threshold then
       ngx.req.set_header('X-Foxsec-IP-Reputation-Below-Threshold', 'true')
       ngx.req.set_header('X-Foxsec-Block', 'true')
+
+      self:audit_log(ip)
       if self.statsd then
         self.statsd.incr("iprepd.status.below_threshold")
       end
@@ -184,6 +186,22 @@ end
 function _M.debug_log(self, msg)
   if self.verbose == 1 then
     ngx.log(ngx.ERR, string.format("[verbose] %s", msg))
+  end
+end
+
+function _M.audit_log(self, ip)
+  if self.audit_blocked_requests == 1 then
+    ngx.req.read_body()
+    local headers = ngx.req.get_headers()
+    local request_headers_all = ""
+    for k,v in pairs(headers) do
+      request_headers_all = request_headers_all .. string.format('"%s": "%s", ', k, v)
+    end
+    local data = ngx.req.get_body_data()
+    if not data then
+      data = ngx.req.get_body_file()
+    end
+    ngx.log(ngx.ALERT, string.format('FoxSec Audit || "%s" || %s || "%s" ||', ip, request_headers_all, data))
   end
 end
 
