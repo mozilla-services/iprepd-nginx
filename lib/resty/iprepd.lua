@@ -39,6 +39,12 @@ function _M.new(options)
     whitelist = iputils.parse_cidrs(whitelist_list)
   end
 
+  if options.audit_blocked_requests == 1 then
+    if options.audit_uri_list == nil or next(options.audit_uri_list) == nil then
+      fatal_error("audit blocked requests is enabled but no uris are specified")
+    end
+  end
+
   local self = {
     url = iprepd_url,
     timeout = options.timeout or 10,
@@ -60,6 +66,8 @@ function _M.new(options)
     verbose = options.verbose or 0,
     whitelist = whitelist,
     audit_blocked_requests = options.audit_blocked_requests or 0,
+    audit_include_headers = options.audit_include_headers or 0,
+    audit_uri_list = options.audit_uri_list or {},
   }
 
   return setmetatable(self, mt)
@@ -191,17 +199,28 @@ end
 
 function _M.audit_log(self, ip)
   if self.audit_blocked_requests == 1 then
-    ngx.req.read_body()
-    local headers = ngx.req.get_headers()
-    local request_headers_all = ""
-    for k,v in pairs(headers) do
-      request_headers_all = request_headers_all .. string.format('"%s": "%s", ', k, v)
+    local should_audit_request = 0
+    for i, uri in ipairs(self.audit_uri_list) do
+      if string.match(uri, ngx.var.uri) then
+        should_audit_request = 1
+        break;
+      end
     end
-    local data = ngx.req.get_body_data()
-    if not data then
-      data = ngx.req.get_body_file()
+    if should_audit_request == 1 then
+      ngx.req.read_body()
+      local request_headers_all = ""
+      if self.audit_include_headers == 1 then
+        local headers = ngx.req.get_headers()
+        for k,v in pairs(headers) do
+          request_headers_all = request_headers_all .. string.format('"%s": "%s", ', k, v)
+        end
+      end
+      local data = ngx.req.get_body_data()
+      if not data then
+        data = ngx.req.get_body_file()
+      end
+      ngx.log(ngx.ALERT, string.format('FoxSec Audit || "%s" || %s || "%s" || "%s" ||', ip, ngx.var.uri, request_headers_all, data))
     end
-    ngx.log(ngx.ALERT, string.format('FoxSec Audit || "%s" || %s || "%s" || "%s" ||', ip, ngx.var.uri, request_headers_all, data))
   end
 end
 

@@ -99,6 +99,9 @@ violations for your environment.
 --              severity of "ERROR" so that nginx log levels do not need to be changed. (defaults
 --              to disabled)
 --    whitelist - List of whitelisted IP's and IP CIDR's. (defaults to empty)
+-- audit_blocked_requests - records the body and optionally headers of requests that are being blocked within nginx (defaults disabled, if enabled the uris to audit must be given)
+-- audit_include_headers - if audit_blocked_requests is enabled, also record the headers (defaults disabled)
+-- audit_uri_list - a list of endpoints that will be audited if audit_blocked_requests is enabled (defaults to empty)
 --
 client = require("resty.iprepd").new({
   api_key = os.getenv("IPREPD_API_KEY"),
