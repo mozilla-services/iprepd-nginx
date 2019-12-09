@@ -3,6 +3,7 @@ local http = require('resty.http')
 local iputils = require('resty.iputils')
 local lrucache = require('resty.lrucache')
 local statsd = require('resty.statsd')
+local b64 = require('ngx.base64')
 
 function fatal_error(error_msg)
   ngx.log(ngx.ERR, error_msg)
@@ -200,10 +201,11 @@ end
 function _M.audit_log(self, ip)
   if self.audit_blocked_requests == 1 then
     local should_audit_request = 0
+    local headers = ngx.req.get_headers()
     for i, uri in ipairs(self.audit_uri_list) do
-      if string.match(uri, ngx.var.uri) then
+      if string.match(ngx.var.uri, uri) then
         should_audit_request = 1
-        break;
+        break
       end
     end
     if should_audit_request == 1 then
@@ -212,6 +214,9 @@ function _M.audit_log(self, ip)
       if self.audit_include_headers == 1 then
         local headers = ngx.req.get_headers()
         for k,v in pairs(headers) do
+          if k == "authorization" or k == "proxy-authorization" then
+            v = "REMOVED"
+          end
           request_headers_all = request_headers_all .. string.format('"%s": "%s", ', k, v)
         end
       end
@@ -219,7 +224,12 @@ function _M.audit_log(self, ip)
       if not data then
         data = ngx.req.get_body_file()
       end
-      ngx.log(ngx.ALERT, string.format('FoxSec Audit || "%s" || %s || "%s" || "%s" ||', ip, ngx.var.uri, request_headers_all, data))
+      if not data then
+        data = "unable to read body"
+      end
+      local encoded_headers = b64.encode_base64url(request_headers_all)
+      local encoded_body = b64.encode_base64url(data)
+      ngx.log(ngx.ALERT, string.format('FoxSec Audit || %s || %s || %s || %s ||', ip, ngx.var.uri, encoded_headers, encoded_body))
     end
   end
 end

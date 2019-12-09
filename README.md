@@ -68,6 +68,17 @@ of what kind of violations exist, how likely a client is to activate these viola
 A decent value to start at is `50`, but you will want to make sure this is tested along side the implemented iprepd
 violations for your environment.
 
+#### Audit parameters
+
+The `audit` values in the client allow configuration of recording blocked requests to the log for security auditing purposes. The audit message includes the request body if small enough to be buffered in memory or the name of the body file if it had to be written to disk. This is dependent on the nginx setting `client_body_buffer_size`.
+
+`audit_blocked_requests` enables auditing, by default it is disabled.
+
+`audit_include_headers` includes the request headers in the audit message. By default, it is disabled. When enabled, Authorization and Proxy-Authorization header values are removed.
+
+`audit_uri_list` is a table of uris that should be audited. This is mandatory when auditing is enabled. Uri's can be either a simple string or a Lua pattern.
+For example,  `audit_uri_list = {"test", "/test/%d/somethingelse"}` would allow cause requests to `/test/1/somethingelse` as well as `/test` to be recorded.
+
 #### Example
 
 ```lua
@@ -118,9 +129,13 @@ client = require("resty.iprepd").new({
   statsd_flush_timer = 10,
   blocking_mode = 0,
   verbose = 0,
-  whitelist = {"127.0.0.1", "10.10.10.0/24", "192.168.0.0/16"}
+  whitelist = {"127.0.0.1", "10.10.10.0/24", "192.168.0.0/16"},
+  audit_blocked_requests = 0,
+  audit_include_headers = 0,
+  audit_uri_list = {}
 })
 ```
+
 
 ### Metrics (statsd)
 
@@ -236,4 +251,6 @@ STATSD_MAX_BUFFER_COUNT=200
 STATSD_FLUSH_TIMER=2
 BLOCKING_MODE=0
 AUDIT_BLOCKED_REQUESTS=0
+AUDIT_INCLUDE_HEADERS=0
+AUDIT_URI_LIST={}
 ```
