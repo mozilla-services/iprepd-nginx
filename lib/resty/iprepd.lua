@@ -212,10 +212,9 @@ function _M.audit_log(self, ip)
       local request_headers_all = ""
       if self.audit_include_headers == 1 then
         local headers = ngx.req.get_headers()
+        headers['authorization'] = nil
+        headers['proxy-authorization'] = nil
         for k,v in pairs(headers) do
-          if k == "authorization" or k == "proxy-authorization" then
-            v = "REMOVED"
-          end
           request_headers_all = request_headers_all .. string.format('"%s": "%s", ', k, v)
         end
       end
@@ -230,7 +229,7 @@ function _M.audit_log(self, ip)
       if not data then
         data = "unable to read body"
       end
-      ngx.log(ngx.ALERT, string.format('FoxSec Audit || %s || %s || %s || %s ||', ip, ngx.var.uri, request_headers_all, data))
+      ngx.log(ngx.ALERT, string.format('FoxSec Audit || ip: %s, headers: %s, body: %s', ip, request_headers_all, data))
     end
   end
 end
