@@ -137,12 +137,15 @@ def test_reputation_fail(openresty):
 def test_serial_range(openresty):
     update_reputation(0, '127.0.0.1')
     os.environ['BLOCKING_MODE'] = '1'
+    # Set the smallest possible cache size for the test
+    os.environ['IPREPD_CACHE_BUFFER_COUNT'] = '1'
     openresty.begin()
     for _ in range(250):
         ret = simple_request()
         assert ret.status_code == 429
     _, err = openresty.stop()
     del os.environ['BLOCKING_MODE']
+    del os.environ['IPREPD_CACHE_BUFFER_COUNT']
 
 def test_reputation_above(openresty):
     update_reputation(51, '127.0.0.1')
