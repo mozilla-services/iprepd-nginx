@@ -103,6 +103,9 @@ def update_reputation(rep, ip):
 def simple_request():
     return requests.get('http://127.0.0.1/iprepd_ping')
 
+def post_request():
+    return requests.post('http://127.0.0.1/iprepd_ping', data='body')
+
 def test_simple_request(openresty):
     openresty.begin()
     ret = simple_request()
@@ -219,3 +222,51 @@ def test_cache_errors_enabled(openresty):
     os.environ['IPREPD_URL'] = oldurl
     del os.environ['BLOCKING_MODE']
     del os.environ['IPREPD_CACHE_ERRORS']
+
+def test_audit_requests_get(openresty):
+    os.environ['BLOCKING_MODE'] = '1'
+    os.environ['AUDIT_BLOCKED_REQUESTS'] = '1'
+    os.environ['AUDIT_URI_LIST'] = '/iprepd_ping'
+    update_reputation(0, '127.0.0.1')
+    openresty.begin()
+    ret = simple_request()
+    assert ret.status_code == 429
+    _, err = openresty.stop()
+    assert 'audit_log(): FoxSec Audit || ip: 127.0.0.1, headers: , body: ' + \
+        'unable to read body, client: 127.0.0.1, server: , request: "GET ' + \
+        '/iprepd_ping HTTP/1.1", host: "127.0.0.1"' in str(err)
+    del os.environ['BLOCKING_MODE']
+    del os.environ['AUDIT_BLOCKED_REQUESTS']
+    del os.environ['AUDIT_URI_LIST']
+
+def test_audit_requests_get_pattern(openresty):
+    os.environ['BLOCKING_MODE'] = '1'
+    os.environ['AUDIT_BLOCKED_REQUESTS'] = '1'
+    os.environ['AUDIT_URI_LIST'] = '/something,/iprepd_%l%l%l%l'
+    update_reputation(0, '127.0.0.1')
+    openresty.begin()
+    ret = simple_request()
+    assert ret.status_code == 429
+    _, err = openresty.stop()
+    assert 'audit_log(): FoxSec Audit || ip: 127.0.0.1, headers: , body: ' + \
+        'unable to read body, client: 127.0.0.1, server: , request: "GET ' + \
+        '/iprepd_ping HTTP/1.1", host: "127.0.0.1"' in str(err)
+    del os.environ['BLOCKING_MODE']
+    del os.environ['AUDIT_BLOCKED_REQUESTS']
+    del os.environ['AUDIT_URI_LIST']
+
+def test_audit_requests_get_pattern(openresty):
+    os.environ['BLOCKING_MODE'] = '1'
+    os.environ['AUDIT_BLOCKED_REQUESTS'] = '1'
+    os.environ['AUDIT_URI_LIST'] = '/something,/iprepd_%l%l%l%l'
+    update_reputation(0, '127.0.0.1')
+    openresty.begin()
+    ret = post_request()
+    assert ret.status_code == 429
+    _, err = openresty.stop()
+    assert 'audit_log(): FoxSec Audit || ip: 127.0.0.1, headers: , body: Ym9keQ==' + \
+        ', client: 127.0.0.1, server: , request: "POST /iprepd_ping HTTP/1.1", ho' + \
+        'st: "127.0.0.1"' in str(err)
+    del os.environ['BLOCKING_MODE']
+    del os.environ['AUDIT_BLOCKED_REQUESTS']
+    del os.environ['AUDIT_URI_LIST']
