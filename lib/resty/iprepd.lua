@@ -184,7 +184,7 @@ function _M.flush_stats(self)
 end
 
 function _M.async_flush_stats(premature, self)
-  self.statsd.flush(self.statsd_host, self.statsd_port)
+  if self.statsd then self.statsd.flush(self.statsd_host, self.statsd_port) end
 end
 
 function _M.config_flush_timer(self)
