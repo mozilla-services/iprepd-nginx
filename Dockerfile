@@ -11,7 +11,8 @@ RUN yum install -y epel-release && \
 	pip3 install pytest requests && \
 	opm get pintsized/lua-resty-http hamishforbes/lua-resty-iputils openresty/lua-resty-lrucache && \
 	mkdir -p /opt/iprepd-nginx/{etc,test} && \
-	groupadd nginx && useradd -g nginx --shell /bin/false nginx
+	groupadd nginx && useradd -g nginx --shell /bin/false nginx && \
+	rm -rf /usr/local/go
 
 # Install iprepd-nginx from the local branch in the image
 COPY lib/resty/*.lua /usr/local/openresty/site/lualib/resty/
