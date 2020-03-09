@@ -9,13 +9,14 @@ RUN yum install -y epel-release && \
 	env GOPATH=/root/go /usr/local/go/bin/go get go.mozilla.org/iprepd && \
 	env GOPATH=/root/go /usr/local/go/bin/go install go.mozilla.org/iprepd/cmd/iprepd && \
 	pip3 install pytest requests && \
-	opm get pintsized/lua-resty-http hamishforbes/lua-resty-iputils openresty/lua-resty-lrucache && \
 	mkdir -p /opt/iprepd-nginx/{etc,test} && mkdir -p /opt/iprepd-nginx/etc/testconf && \
 	groupadd nginx && useradd -g nginx --shell /bin/false nginx && \
 	rm -rf /usr/local/go
 
-# Install iprepd-nginx from the local branch in the image
-COPY lib/resty/*.lua /usr/local/openresty/site/lualib/resty/
+# Install iprepd-nginx from the local branch in the image, and our vendored Lua
+# dependencies
+COPY lib/resty/*.lua vendor/resty/ \
+	/usr/local/openresty/site/lualib/resty/
 
 # Copy base OpenResty configuration
 COPY etc/conf.d /usr/local/openresty/nginx/conf/conf.d/
