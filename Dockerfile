@@ -10,7 +10,7 @@ RUN yum install -y epel-release && \
 	env GOPATH=/root/go /usr/local/go/bin/go install go.mozilla.org/iprepd/cmd/iprepd && \
 	pip3 install pytest requests && \
 	opm get pintsized/lua-resty-http hamishforbes/lua-resty-iputils openresty/lua-resty-lrucache && \
-	mkdir -p /opt/iprepd-nginx/{etc,test} && \
+	mkdir -p /opt/iprepd-nginx/{etc,test} && mkdir -p /opt/iprepd-nginx/etc/testconf && \
 	groupadd nginx && useradd -g nginx --shell /bin/false nginx && \
 	rm -rf /usr/local/go
 
@@ -24,6 +24,9 @@ COPY etc/nginx.conf /usr/local/openresty/nginx/conf/
 # Copy objects used as part of testing
 COPY etc/iprepd.yaml etc/test-env etc/iprepd-nginx-ping.txt \
 	/opt/iprepd-nginx/etc/
+RUN cp -Rp /usr/local/openresty/nginx/conf \
+	/opt/iprepd-nginx/etc/testconf/rl
+COPY etc/testconf/ /opt/iprepd-nginx/etc/testconf
 COPY test/test.sh test/test_module.py /opt/iprepd-nginx/test/
 
 EXPOSE 80

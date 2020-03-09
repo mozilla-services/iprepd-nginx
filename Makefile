@@ -17,6 +17,7 @@ test_dev:
 		-v $(shell pwd)/etc/conf.d:/usr/local/openresty/nginx/conf/conf.d \
 		-v $(shell pwd)/lib/resty/iprepd.lua:/usr/local/openresty/site/lualib/resty/iprepd.lua \
 		-v $(shell pwd)/lib/resty/statsd.lua:/usr/local/openresty/site/lualib/resty/statsd.lua \
+		-v $(shell pwd)/etc/testconf/rl/conf.d:/opt/iprepd-nginx/etc/testconf/rl/conf.d \
 		-v $(shell pwd)/test/test_module.py:/opt/iprepd-nginx/test/test_module.py \
 		--entrypoint /opt/iprepd-nginx/test/test.sh $(IMAGE_NAME)
 

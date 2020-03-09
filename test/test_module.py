@@ -33,7 +33,9 @@ class openresty_runner(threading.Thread):
             except Exception as e:
                 time.sleep(0.1)
 
-    def __init__(self):
+    def __init__(self, conf=None):
+        if conf:
+            self.cmd = self.cmd + ['-c', conf]
         threading.Thread.__init__(self)
 
 class iprepd_mock(threading.Thread):
@@ -87,11 +89,19 @@ def start_http(request):
 def stop_http():
     iprepd_mock_thread.shutdown()
 
-@pytest.fixture
-def openresty():
+def test_defaults():
     # Reset IP reputation as part of fixture before test
     update_reputation(100, '127.0.0.1')
+
+@pytest.fixture
+def openresty():
+    test_defaults()
     return openresty_runner()
+
+@pytest.fixture
+def openresty_rl():
+    test_defaults()
+    return openresty_runner(conf='/opt/iprepd-nginx/etc/testconf/rl/nginx.conf')
 
 def update_reputation(rep, ip):
     body = { 'object': ip, 'type': 'ip', 'reputation': rep }
@@ -144,6 +154,19 @@ def test_serial_range(openresty):
         ret = simple_request()
         assert ret.status_code == 429
     _, err = openresty.stop()
+    del os.environ['BLOCKING_MODE']
+    del os.environ['IPREPD_CACHE_BUFFER_COUNT']
+
+def test_serial_range_rl(openresty_rl):
+    update_reputation(0, '127.0.0.1')
+    os.environ['BLOCKING_MODE'] = '1'
+    # Set the smallest possible cache size for the test
+    os.environ['IPREPD_CACHE_BUFFER_COUNT'] = '1'
+    openresty_rl.begin()
+    for _ in range(250):
+        ret = simple_request()
+        assert ret.status_code == 429
+    _, err = openresty_rl.stop()
     del os.environ['BLOCKING_MODE']
     del os.environ['IPREPD_CACHE_BUFFER_COUNT']
 
