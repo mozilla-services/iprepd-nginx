@@ -8,7 +8,10 @@ jobs:
     - setup_remote_docker
     - run:
         name: Build Image
-        command: docker build -t gcr.io/moz-fx-cloudops-images-global/${CIRCLE_PROJECT_REPONAME}:latest .
+        command: make build
+    - run:
+        name: Test Image
+        command: make test
 
   push-latest:
     docker:
@@ -19,7 +22,13 @@ jobs:
 
     - run:
         name: Build Image
-        command: docker build -t gcr.io/moz-fx-cloudops-images-global/${CIRCLE_PROJECT_REPONAME}:latest .
+        command: make build
+    - run:
+        name: Test Image
+        command: make test
+    - run:
+        name: Tag Image
+        command: docker tag iprepd-nginx:latest gcr.io/moz-fx-cloudops-images-global/${CIRCLE_PROJECT_REPONAME}:latest
     - run:
         name: Push Image
         command: |
@@ -38,10 +47,16 @@ jobs:
 
     - run:
         name: Build Image
+        command: make build
+    - run:
+        name: Test Image
+        command: make test
+    - run:
+        name: Tag Image
         command: |
-          docker build -t "gcr.io/moz-fx-cloudops-images-global/${CIRCLE_PROJECT_REPONAME}:${CIRCLE_TAG}" .
-          docker tag "gcr.io/moz-fx-cloudops-images-global/${CIRCLE_PROJECT_REPONAME}:${CIRCLE_TAG}" "gcr.io/moz-fx-cloudops-images-global/${CIRCLE_PROJECT_REPONAME}:${CIRCLE_TAG%.*}" # 1.4.3 -> 1.4 for example
-          docker tag "gcr.io/moz-fx-cloudops-images-global/${CIRCLE_PROJECT_REPONAME}:${CIRCLE_TAG}" "gcr.io/moz-fx-cloudops-images-global/${CIRCLE_PROJECT_REPONAME}:${CIRCLE_TAG%%.*}" # 1 -> 1 for example
+          docker tag iprepd-nginx:latest "gcr.io/moz-fx-cloudops-images-global/${CIRCLE_PROJECT_REPONAME}:${CIRCLE_TAG}"
+          docker tag iprepd-nginx:latest "gcr.io/moz-fx-cloudops-images-global/${CIRCLE_PROJECT_REPONAME}:${CIRCLE_TAG%.*}" # 1.4.3 -> 1.4 for example
+          docker tag iprepd-nginx:latest "gcr.io/moz-fx-cloudops-images-global/${CIRCLE_PROJECT_REPONAME}:${CIRCLE_TAG%%.*}" # 1 -> 1 for example
     - run:
         name: Push Image
         command: |
