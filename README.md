@@ -129,10 +129,10 @@ client = require("resty.iprepd").new({
   statsd_flush_timer = 10,
   blocking_mode = 0,
   verbose = 0,
-  whitelist = {"127.0.0.1", "10.10.10.0/24", "192.168.0.0/16"},
+  whitelist = "127.0.0.1,10.10.10.0/24,192.168.0.16/16",
   audit_blocked_requests = 0,
   audit_include_headers = 0,
-  audit_uri_list = {}
+  audit_uri_list = "/uri1,/uri2",
 })
 ```
 
@@ -246,6 +246,7 @@ IPREPD_TIMEOUT=10
 IPREPD_CACHE_TTL=30
 IPREPD_CACHE_ERRORS=0
 IPREPD_CACHE_BUFFER_COUNT=5000
+IPREPD_WHITELISTED_LIST=10.0.0.0/8,127.0.0.1/32
 STATSD_HOST=127.0.0.1
 STATSD_PORT=8125
 STATSD_MAX_BUFFER_COUNT=200
