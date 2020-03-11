@@ -33,14 +33,24 @@ function _M.new(options)
     statsd_client = statsd
   end
 
+  local audit_uri_list = {}
+  if options.audit_uri_list and type(options.audit_uri_list) == 'string' then
+    for s in string.gmatch(options.audit_uri_list, "([^,]+)") do
+      table.insert(audit_uri_list, s)
+    end
+  end
+
   local whitelist = nil
-  local whitelist_list = options.whitelist or nil
-  if whitelist_list then
-    whitelist = iputils.parse_cidrs(whitelist_list)
+  if options.whitelist and type(options.whitelist) == 'string' then
+    local whitelistbuf = {}
+    for s in string.gmatch(options.whitelist, "([^,]+)") do
+      table.insert(whitelistbuf, s)
+    end
+    whitelist = iputils.parse_cidrs(whitelistbuf)
   end
 
   if options.audit_blocked_requests == 1 then
-    if options.audit_uri_list == nil or next(options.audit_uri_list) == nil then
+    if next(audit_uri_list) == nil then
       fatal_error("audit blocked requests is enabled but no uris are specified")
     end
   end
@@ -67,7 +77,7 @@ function _M.new(options)
     whitelist = whitelist,
     audit_blocked_requests = options.audit_blocked_requests or 0,
     audit_include_headers = options.audit_include_headers or 0,
-    audit_uri_list = options.audit_uri_list or {},
+    audit_uri_list = audit_uri_list,
   }
 
   return setmetatable(self, mt)

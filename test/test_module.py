@@ -296,3 +296,36 @@ def test_audit_requests_get_pattern(openresty):
     del os.environ['BLOCKING_MODE']
     del os.environ['AUDIT_BLOCKED_REQUESTS']
     del os.environ['AUDIT_URI_LIST']
+
+def test_whitelist_match_multi(openresty):
+    update_reputation(0, '127.0.0.1')
+    os.environ['BLOCKING_MODE'] = '1'
+    os.environ['IPREPD_WHITELISTED_LIST'] = '10.0.0.0/8,127.0.0.0/24'
+    openresty.begin()
+    ret = simple_request()
+    _, err = openresty.stop()
+    assert ret.status_code == 200
+    del os.environ['BLOCKING_MODE']
+    del os.environ['IPREPD_WHITELISTED_LIST']
+
+def test_whitelist_match_single(openresty):
+    update_reputation(0, '127.0.0.1')
+    os.environ['BLOCKING_MODE'] = '1'
+    os.environ['IPREPD_WHITELISTED_LIST'] = '127.0.0.1/32'
+    openresty.begin()
+    ret = simple_request()
+    _, err = openresty.stop()
+    assert ret.status_code == 200
+    del os.environ['BLOCKING_MODE']
+    del os.environ['IPREPD_WHITELISTED_LIST']
+
+def test_whitelist_nomatch_single(openresty):
+    update_reputation(0, '127.0.0.1')
+    os.environ['BLOCKING_MODE'] = '1'
+    os.environ['IPREPD_WHITELISTED_LIST'] = '127.0.0.2/32'
+    openresty.begin()
+    ret = simple_request()
+    _, err = openresty.stop()
+    assert ret.status_code == 429
+    del os.environ['BLOCKING_MODE']
+    del os.environ['IPREPD_WHITELISTED_LIST']

@@ -6,8 +6,8 @@ RUN yum install -y epel-release && \
 	curl -OL https://dl.google.com/go/go1.14.linux-amd64.tar.gz && \
 	(cd /usr/local && tar -zxf /go1.14.linux-amd64.tar.gz) && \
 	rm -f /go1.14.linux-amd64.tar.gz && \
-	env GOPATH=/root/go /usr/local/go/bin/go get go.mozilla.org/iprepd && \
-	env GOPATH=/root/go /usr/local/go/bin/go install go.mozilla.org/iprepd/cmd/iprepd && \
+	env GOPATH=/root/go GO111MODULE=on /usr/local/go/bin/go \
+	get go.mozilla.org/iprepd/cmd/iprepd && \
 	pip3 install pytest requests && \
 	mkdir -p /opt/iprepd-nginx/{etc,test} && mkdir -p /opt/iprepd-nginx/etc/testconf && \
 	groupadd nginx && useradd -g nginx --shell /bin/false nginx && \
