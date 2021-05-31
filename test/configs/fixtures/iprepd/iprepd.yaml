@@ -1,8 +1,8 @@
 ---
 # Configuration file intended for development/testing
-listen: 0.0.0.0:8080
+listen: 0.0.0.0:8082
 redis:
-  addr: 127.0.0.1:6379
+  addr: redis:6379
   readtimeout: 50
   writetimeout: 50
   dialtimeout: 100
