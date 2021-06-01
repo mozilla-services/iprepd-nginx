@@ -29,9 +29,14 @@ jobs:
     docker:
     - image: google/cloud-sdk
     steps:
+    - run:
+        name: Install Docker Compose
+        command: |
+          curl -L https://github.com/docker/compose/releases/download/1.25.3/docker-compose-`uname -s`-`uname -m` > ~/docker-compose
+          chmod +x ~/docker-compose
+          mv ~/docker-compose /usr/local/bin/docker-compose
     - checkout
     - setup_remote_docker
-
     - run:
         name: Build Image
         command: make build
@@ -60,9 +65,14 @@ jobs:
     docker:
     - image: google/cloud-sdk
     steps:
+    - run:
+        name: Install Docker Compose
+        command: |
+          curl -L https://github.com/docker/compose/releases/download/1.25.3/docker-compose-`uname -s`-`uname -m` > ~/docker-compose
+          chmod +x ~/docker-compose
+          mv ~/docker-compose /usr/local/bin/docker-compose
     - checkout
     - setup_remote_docker
-
     - run:
         name: Build Image
         command: make build

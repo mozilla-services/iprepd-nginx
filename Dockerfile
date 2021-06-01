@@ -1,4 +1,4 @@
-FROM openresty/openresty:1.19.3.1-centos AS production
+FROM openresty/openresty:1.19.3.1-centos AS base
 
 RUN mkdir -p /opt/iprepd-nginx/etc && \
     groupadd nginx && useradd -g nginx --shell /bin/false nginx
@@ -12,12 +12,8 @@ COPY lib/resty/*.lua vendor/resty/ \
 COPY etc/conf.d /usr/local/openresty/nginx/conf/conf.d
 COPY etc/nginx.conf /usr/local/openresty/nginx/conf/nginx.conf
 
-EXPOSE 80
-STOPSIGNAL SIGTERM
-ENTRYPOINT ["/usr/bin/openresty", "-g", "daemon off;"]
-
 # create image for integration tests
-FROM production AS integration-test
+FROM base AS integration-test
 
 # Install utils for testing
 # disable updates for openresty to ensure we test against
@@ -39,3 +35,11 @@ COPY test/configs/integration/etc/testconf/rl/conf.d /opt/iprepd-nginx/etc/testc
 COPY test/integration_test.py /opt/iprepd-nginx/test/
 WORKDIR /opt/iprepd-nginx/test
 ENTRYPOINT ["pytest", "-s"]
+
+# create production image
+FROM base as production
+
+WORKDIR /
+EXPOSE 80
+STOPSIGNAL SIGTERM
+ENTRYPOINT ["/usr/bin/openresty", "-g", "daemon off;"]

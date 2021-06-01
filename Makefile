@@ -1,9 +1,9 @@
 IMAGE_NAME	:= "iprepd-nginx"
 
-# Build default docker image
+# Build docker images for testing and prod
 build:
-	docker-compose build iprepd-nginx
 	docker-compose build integration-test
+	docker-compose build iprepd-nginx
 
 # Build test image
 build_test:
