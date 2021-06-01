@@ -4,28 +4,51 @@ jobs:
     docker:
     - image: google/cloud-sdk
     steps:
+    - run:
+        name: Install Docker Compose
+        command: |
+          curl -L https://github.com/docker/compose/releases/download/1.25.3/docker-compose-`uname -s`-`uname -m` > ~/docker-compose
+          chmod +x ~/docker-compose
+          mv ~/docker-compose /usr/local/bin/docker-compose
     - checkout
     - setup_remote_docker
     - run:
         name: Build Image
         command: make build
     - run:
-        name: Test Image
-        command: make test
+        name: Run Integration Tests
+        command: make integration_test
+    - run:
+        name: Build Test Fixtures
+        command: make build_test
+    - run:
+        name: Run Smoke Tests
+        command: make smoke_test
 
   push-latest:
     docker:
     - image: google/cloud-sdk
     steps:
+    - run:
+        name: Install Docker Compose
+        command: |
+          curl -L https://github.com/docker/compose/releases/download/1.25.3/docker-compose-`uname -s`-`uname -m` > ~/docker-compose
+          chmod +x ~/docker-compose
+          mv ~/docker-compose /usr/local/bin/docker-compose
     - checkout
     - setup_remote_docker
-
     - run:
         name: Build Image
         command: make build
     - run:
-        name: Test Image
-        command: make test
+        name: Run Integration Tests
+        command: make integration_test
+    - run:
+        name: Build Test Fixtures
+        command: make build_test
+    - run:
+        name: Run Smoke Tests
+        command: make smoke_test
     - run:
         name: Tag Image
         command: docker tag iprepd-nginx:latest gcr.io/moz-fx-cloudops-images-global/${CIRCLE_PROJECT_REPONAME}:latest
@@ -42,15 +65,26 @@ jobs:
     docker:
     - image: google/cloud-sdk
     steps:
+    - run:
+        name: Install Docker Compose
+        command: |
+          curl -L https://github.com/docker/compose/releases/download/1.25.3/docker-compose-`uname -s`-`uname -m` > ~/docker-compose
+          chmod +x ~/docker-compose
+          mv ~/docker-compose /usr/local/bin/docker-compose
     - checkout
     - setup_remote_docker
-
     - run:
         name: Build Image
         command: make build
     - run:
-        name: Test Image
-        command: make test
+        name: Run Integration Tests
+        command: make integration_test
+    - run:
+        name: Build Test Fixtures
+        command: make build_test
+    - run:
+        name: Run Smoke Tests
+        command: make smoke_test
     - run:
         name: Tag Image
         command: |

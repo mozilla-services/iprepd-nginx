@@ -1,0 +1,79 @@
+version: '3.4'
+services:
+  backend:
+    container_name: backend
+    image: nginx
+    volumes:
+      - './test/configs/fixtures/backend:/usr/share/nginx/html'
+  redis:
+    container_name: iprepd_redis
+    image: redis:3.2
+    ports:
+      - "6379:6379"
+  iprepd:
+    container_name: iprepd_app
+    image: mozilla/iprepd:latest
+    links:
+      - redis
+    ports:
+      - "8082:8082"
+    volumes:
+      - './test/configs/fixtures/iprepd:/app/config'
+    command: bash -c '/app/bin/iprepd -c /app/config/iprepd.yaml'
+  integration-test:
+    container_name: iprepd_nginx_int_test
+    image: iprepd-nginx:integration-test
+    build:
+      context: .
+      target: integration-test
+    links:
+      - iprepd
+    environment:
+      - backend=http://thebackend
+      - IPREPD_URL=http://iprepd:8082
+      - IPREPD_API_KEY=test
+      - IPREPD_REPUTATION_THRESHOLD=50
+      - IPREPD_TIMEOUT=1000
+      - STATSD_HOST=127.0.0.1
+  iprepd-nginx:
+    container_name: iprepd_nginx
+    image: iprepd-nginx
+    build:
+      context: .
+      target: production
+    ports:
+      - "8000:80"
+    links:
+      - iprepd
+      - backend
+    environment:
+      - backend=http://backend
+      - IPREPD_URL=http://iprepd:8082
+      - IPREPD_API_KEY=test
+      - IPREPD_REPUTATION_THRESHOLD=50
+      - IPREPD_TIMEOUT=10
+      - IPREPD_CACHE_TTL=5
+      - IPREPD_CACHE_ERRORS=0
+      - STATSD_HOST=127.0.0.1
+      - STATSD_PORT=8125
+      - STATSD_MAX_BUFFER_COUNT=200
+      - STATSD_FLUSH_TIMER=2
+      - VERBOSE=1
+      - BLOCKING_MODE=1
+      - AUDIT_BLOCKED_REQUESTS=0
+      - AUDIT_INCLUDE_HEADERS=1
+  test-client:
+    container_name: test-client
+    image: test-client
+    build:
+      context: ./test/test-client
+    links:
+      - iprepd
+      - iprepd-nginx
+    depends_on:
+      - iprepd-nginx
+    environment:
+      - IPREPD_URL=http://iprepd:8082
+      - IPREPD_API_KEY=test
+      - IPREPD_NGINX=http://iprepd-nginx:80
+      - LOG_LEVEL=DEBUG

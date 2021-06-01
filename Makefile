@@ -1,28 +1,41 @@
 IMAGE_NAME	:= "iprepd-nginx"
 
-# Build default docker image
+# Build docker images for testing and prod
 build:
-	docker build -t $(IMAGE_NAME) .
+	docker-compose build integration-test
+	docker-compose build iprepd-nginx
 
-# Test iprepd-nginx using built image
-test:
-	docker run -ti --rm \
-		--entrypoint /opt/iprepd-nginx/test/test.sh $(IMAGE_NAME)
+# Build test image
+build_test:
+	docker-compose build --no-cache test-client
 
-# Test iprepd-nginx, override image installed iprepd-nginx Lua files, tests, and
-# nginx configuration; useful for testing local modifications
-test_dev:
-	docker run -ti --rm \
-		-v $(shell pwd)/etc/nginx.conf:/usr/local/openresty/nginx/conf/nginx.conf \
-		-v $(shell pwd)/etc/conf.d:/usr/local/openresty/nginx/conf/conf.d \
-		-v $(shell pwd)/lib/resty/iprepd.lua:/usr/local/openresty/site/lualib/resty/iprepd.lua \
-		-v $(shell pwd)/lib/resty/statsd.lua:/usr/local/openresty/site/lualib/resty/statsd.lua \
-		-v $(shell pwd)/etc/testconf/rl/conf.d:/opt/iprepd-nginx/etc/testconf/rl/conf.d \
-		-v $(shell pwd)/test/test_module.py:/opt/iprepd-nginx/test/test_module.py \
-		--entrypoint /opt/iprepd-nginx/test/test.sh $(IMAGE_NAME)
+# Run tests from within iprepd-nginx integration stage container
+# Copy configs for fixtures so CI doesn't need volume mount
+integration_test:
+	docker-compose down -v
+	docker-compose up --no-start iprepd
+	docker cp ./test/configs/fixtures/iprepd/iprepd.yaml iprepd_app:/app/config/iprepd.yaml
+	docker-compose run integration-test
+
+# Run all smoke test against production image
+# Copy configs for fixtures so CI doesn't need volume mount
+smoke_test:
+	docker-compose down -v
+	docker-compose up --no-start iprepd backend
+	docker cp ./test/configs/fixtures/iprepd/iprepd.yaml iprepd_app:/app/config/iprepd.yaml
+	docker cp ./test/configs/fixtures/backend/index.html backend:/usr/share/nginx/html/index.html
+	docker-compose up -d iprepd-nginx
+	docker-compose run test-client
+
+# Run development environment, overriding image installed iprepd-nginx Lua files and config
+# Environment contains: iprepd-nginx, iprepd, redis, backend
+run_dev_env:
+	docker-compose down -v
+	docker-compose up iprepd-nginx
 
 # Run development instance, overriding image installed iprepd-nginx Lua files and
 # nginx configuration; requires a .env file in the repository root
+# only container for iprepdnginx
 run_dev:
 	docker run -ti --rm \
 		--env-file=.env \
@@ -32,4 +45,4 @@ run_dev:
 		-v $(shell pwd)/lib/resty/statsd.lua:/usr/local/openresty/site/lualib/resty/statsd.lua \
 		--network="host" $(IMAGE_NAME)
 
-.PHONY: build run_dev test test_dev
+.PHONY: build build_test integration_test run_dev run_dev_env smoke_test

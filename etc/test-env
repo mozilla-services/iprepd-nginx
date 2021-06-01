@@ -1,7 +1,0 @@
-export backend=http://thebackend
-export IPREPD_URL=http://127.0.0.1:8080
-# Increase default timeout to one second for the purposes of running the tests
-export IPREPD_TIMEOUT=1000
-export IPREPD_API_KEY=test
-export IPREPD_REPUTATION_THRESHOLD=50
-export STATSD_HOST=127.0.0.1

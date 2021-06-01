@@ -213,9 +213,21 @@ server {
 
 * Make sure iprepd-nginx is seeing the real client IP. You will usually need to use something like [ngx_http_realip_module](https://nginx.org/en/docs/http/ngx_http_realip_module.html), and confirm that it is configured correctly.
 
+## Running iprepd-nginx dev environment locally
+A dev environment is provided that can be used to test iprepd-nginx with iprepd and a dummy backend service (in this case nginx with static content).
 
-## Running locally
+```
+$ make build
+$ make run_dev_env
+```
 
+Sanity tests can then be run by:
+```
+$ make build_test
+$ make smoke_test
+```
+
+## Running just iprepd-nginx locally
 Create a `.env` file in this repo with the needed environment variables (documentation below).
 
 Then run:

@@ -133,7 +133,7 @@ function _M.get_reputation(self, ip)
   if not reputation then
     local httpc = http.new()
     httpc:set_timeout(self.timeout)
-    local resp, err = httpc:request_uri(string.format("%s/%s", self.url, ip), {
+    local resp, err = httpc:request_uri(string.format("%s/type/ip/%s", self.url, ip), {
       method  = "GET",
       headers = self.iprepd_hdrs,
     })
