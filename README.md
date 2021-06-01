@@ -109,7 +109,7 @@ For example,  `audit_uri_list = {"test", "/test/%d/somethingelse"}` would allow 
 --    verbose - Enables (1) or disables (0) verbose logging. Messages are logged with a
 --              severity of "ERROR" so that nginx log levels do not need to be changed. (defaults
 --              to disabled)
---    whitelist - List of whitelisted IP's and IP CIDR's. (defaults to empty)
+--    allowlist - List of allowlisted IP's and IP CIDR's. (defaults to empty)
 -- audit_blocked_requests - records the body and optionally headers of requests that are being blocked within nginx (defaults disabled, if enabled the uris to audit must be given)
 -- audit_include_headers - if audit_blocked_requests is enabled, also record the headers (defaults disabled)
 -- audit_uri_list - a list of endpoints that will be audited if audit_blocked_requests is enabled (defaults to empty)
@@ -129,7 +129,7 @@ client = require("resty.iprepd").new({
   statsd_flush_timer = 10,
   blocking_mode = 0,
   verbose = 0,
-  whitelist = "127.0.0.1,10.10.10.0/24,192.168.0.16/16",
+  allowlist = "127.0.0.1,10.10.10.0/24,192.168.0.16/16",
   audit_blocked_requests = 0,
   audit_include_headers = 0,
   audit_uri_list = "/uri1,/uri2",
@@ -258,7 +258,7 @@ IPREPD_TIMEOUT=10
 IPREPD_CACHE_TTL=30
 IPREPD_CACHE_ERRORS=0
 IPREPD_CACHE_BUFFER_COUNT=5000
-IPREPD_WHITELISTED_LIST=10.0.0.0/8,127.0.0.1/32
+IPREPD_ALLOWLIST=10.0.0.0/8,127.0.0.1/32
 STATSD_HOST=127.0.0.1
 STATSD_PORT=8125
 STATSD_MAX_BUFFER_COUNT=200
