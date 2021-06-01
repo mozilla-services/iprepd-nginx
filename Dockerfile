@@ -1,8 +1,4 @@
-<<<<<<< HEAD
 FROM openresty/openresty:1.19.3.1-centos AS base
-=======
-FROM openresty/openresty:1.19.3.1-centos as base
->>>>>>> d1eee01 (switch to allowlist and support ipv6 in allowlist)
 
 FROM base as libcidr-builder
 
@@ -14,10 +10,11 @@ RUN mkdir -p /tmp/build &&\
 	cd libcidr-1.2.3 &&\
 	make && make install
 
-FROM base AS production
+FROM base AS intermediate
 
 RUN groupadd nginx && useradd -g nginx --shell /bin/false nginx
 
+# Copy libcidr and set LD_LIBRARY_PATH
 COPY --from=libcidr-builder /tmp/build/usr/local /usr/local
 ENV LD_LIBRARY_PATH /usr/local/lib
 
@@ -31,7 +28,7 @@ COPY etc/conf.d /usr/local/openresty/nginx/conf/conf.d
 COPY etc/nginx.conf /usr/local/openresty/nginx/conf/nginx.conf
 
 # create image for integration tests
-FROM base AS integration-test
+FROM intermediate AS integration-test
 
 # Install utils for testing
 # disable updates for openresty to ensure we test against
@@ -56,7 +53,7 @@ WORKDIR /opt/iprepd-nginx/test
 ENTRYPOINT ["pytest", "-s"]
 
 # create production image
-FROM base as production
+FROM intermediate as production
 
 WORKDIR /
 EXPOSE 80
