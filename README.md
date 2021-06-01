@@ -224,7 +224,7 @@ $ make run_dev_env
 Sanity tests can then be run by:
 ```
 $ make build_test
-$ make e2e_test
+$ make smoke_test
 ```
 
 ## Running just iprepd-nginx locally
