@@ -1,5 +1,5 @@
 ### Vendored Lua dependencies
 
 * pintsized/lua-resty-http
-* GUI/lua-libcidr-ffi
+* api7/lua-resty-ipmatcher
 * openresty/lua-resty-lrucache

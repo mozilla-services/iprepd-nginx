@@ -1,8 +1,8 @@
 local cjson = require('cjson')
 local http = require('resty.http')
-local cidr = require('resty.libcidr-ffi')
 local lrucache = require('resty.lrucache')
 local statsd = require('resty.statsd')
+local ipmatcher = require('resty.ipmatcher')
 
 function fatal_error(error_msg)
   ngx.log(ngx.ERR, error_msg)
@@ -44,23 +44,27 @@ function _M.new(options)
     end
   end
 
-  local allowlist = {}
+  local allowlist = nil
+  local allowlist_table = {}
   if options.whitelist and type(options.whitelist) == 'string' then
     warning("whitelist option is deprecated. please switch to allowlist.")
     for s in string.gmatch(options.whitelist, "([^,]+)") do
-      table.insert(allowlist, cidr.from_str(s))
+      table.insert(allowlist_table, s)
     end
+    allowlist = ipmatcher.new(allowlist_table)
   end
 
   if options.allowlist and type(options.allowlist) == 'string' then
-    if type(next(allowlist)) ~= "nil" then
+    if type(next(allowlist_table)) ~= "nil" then
       warning("both whitelist and allowlist specified - using allowlist")
-      allowlist = {}
+      allowlist_table = {}
     end
     for s in string.gmatch(options.allowlist, "([^,]+)") do
-      table.insert(allowlist, cidr.from_str(s))
+      table.insert(allowlist_table, s)
     end
+    allowlist = ipmatcher.new(allowlist_table)
   end
+
 
   if options.audit_blocked_requests == 1 then
     if next(audit_uri_list) == nil then
@@ -96,30 +100,17 @@ function _M.new(options)
   return setmetatable(self, mt)
 end
 
-function _M.in_allowlist(self, ip)
-  if self.allowlist then
-    to_check = cidr.from_str(ip)
-    for i, list_member in ipairs(self.allowlist) do
-      does_contain = cidr.contains(list_member, to_check)
-      if does_contain then
-        return true
-      end
-    end
-  end
-  return false
-end
-      
-
 function _M.check(self, ip)
   self:debug_log(string.format("Checking %s", ip))
   ngx.req.set_header('X-Foxsec-IP-Reputation-Below-Threshold', 'false')
   ngx.req.set_header('X-Foxsec-Block', 'false')
-  local is_allowed = self:in_allowlist(ip)
-  if is_allowed then
+  
+  if self.allowlist then
+    if self.allowlist:match(ip) then
       self:debug_log(string.format("%s in allowlist", ip))
       return
+    end
   end
-
 
   local reputation = self:get_reputation(ip)
   if reputation then

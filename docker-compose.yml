@@ -58,6 +58,7 @@ services:
       - STATSD_PORT=8125
       - STATSD_MAX_BUFFER_COUNT=200
       - STATSD_FLUSH_TIMER=2
+      - VERBOSE=1
       - BLOCKING_MODE=1
   test-client:
     container_name: test-client
