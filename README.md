@@ -1,3 +1,5 @@
+[![CircleCI](https://circleci.com/gh/mozilla-services/iprepd-nginx?style=svg)](https://circleci.com/gh/mozilla-services/iprepd-nginx)
+
 # iprepd-nginx module
 
 `iprepd-nginx` is an openresty module for integrating with [iprepd](https://github.com/mozilla-services/iprepd).
