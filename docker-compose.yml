@@ -60,8 +60,6 @@ services:
       - STATSD_FLUSH_TIMER=2
       - VERBOSE=1
       - BLOCKING_MODE=1
-      - AUDIT_BLOCKED_REQUESTS=0
-      - AUDIT_INCLUDE_HEADERS=1
   test-client:
     container_name: test-client
     image: test-client

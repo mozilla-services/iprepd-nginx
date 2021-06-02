@@ -1,5 +1,5 @@
 ### Vendored Lua dependencies
 
 * pintsized/lua-resty-http
-* hamishforbes/lua-resty-iputils
+* api7/lua-resty-ipmatcher
 * openresty/lua-resty-lrucache

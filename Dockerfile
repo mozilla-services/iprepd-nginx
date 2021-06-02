@@ -1,7 +1,7 @@
 FROM openresty/openresty:1.19.3.1-centos AS base
 
-RUN mkdir -p /opt/iprepd-nginx/etc && \
-    groupadd nginx && useradd -g nginx --shell /bin/false nginx
+# Add nginx user
+RUN groupadd nginx && useradd -g nginx --shell /bin/false nginx
 
 # Install iprepd-nginx from the local branch in the image, and our vendored Lua
 # dependencies
@@ -12,7 +12,7 @@ COPY lib/resty/*.lua vendor/resty/ \
 COPY etc/conf.d /usr/local/openresty/nginx/conf/conf.d
 COPY etc/nginx.conf /usr/local/openresty/nginx/conf/nginx.conf
 
-# create image for integration tests
+# Create image for integration tests
 FROM base AS integration-test
 
 # Install utils for testing
@@ -22,21 +22,22 @@ RUN yum install -y python3  && \
 	pip3 install pytest requests && \
 	mkdir -p /opt/iprepd-nginx/{etc,test} && \
 	mkdir -p /opt/iprepd-nginx/etc/testconf && \
-	cp -Rp /usr/local/openresty/nginx/conf /opt/iprepd-nginx/etc/testconf/rl
+	cp -Rp /usr/local/openresty/nginx/conf /opt/iprepd-nginx/etc/testconf/rl &&\
+	cp -Rp /usr/local/openresty/nginx/conf /opt/iprepd-nginx/etc/testconf/whitelist_only &&\
+	cp -Rp /usr/local/openresty/nginx/conf /opt/iprepd-nginx/etc/testconf/both_lists
 
-COPY test/configs/integration/etc/conf.d /usr/local/openresty/nginx/conf/conf.d/
+COPY test/configs/integration/etc/conf.d /usr/local/openresty/nginx/conf/conf.d
 COPY test/configs/integration/etc/nginx.conf /usr/local/openresty/nginx/conf/
 COPY test/configs/integration/etc/iprepd-nginx-ping.txt /opt/iprepd-nginx/etc/iprepd-nginx-ping.txt
 
-# Copy objects used as part of integration testing
-COPY test/configs/integration/etc/testconf/rl/nginx.conf /opt/iprepd-nginx/etc/testconf/rl/nginx.conf
-COPY test/configs/integration/etc/testconf/rl/conf.d /opt/iprepd-nginx/etc/testconf/rl/conf.d/
+# Copy additional configs used as part of integration testing
+COPY test/configs/integration/etc/testconf /opt/iprepd-nginx/etc/testconf
 
 COPY test/integration_test.py /opt/iprepd-nginx/test/
 WORKDIR /opt/iprepd-nginx/test
-ENTRYPOINT ["pytest", "-s"]
+ENTRYPOINT ["pytest", "-s", "--log-cli-level=INFO"]
 
-# create production image
+# Create production image
 FROM base as production
 
 WORKDIR /

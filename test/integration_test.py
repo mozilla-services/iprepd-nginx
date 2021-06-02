@@ -103,15 +103,25 @@ def openresty_rl():
     test_defaults()
     return openresty_runner(conf='/opt/iprepd-nginx/etc/testconf/rl/nginx.conf')
 
+@pytest.fixture
+def openresty_bothlists():
+    test_defaults()
+    return openresty_runner(conf='/opt/iprepd-nginx/etc/testconf/both_lists/nginx.conf')
+
+@pytest.fixture
+def openresty_whitelist():
+    test_defaults()
+    return openresty_runner(conf='/opt/iprepd-nginx/etc/testconf/whitelist_only/nginx.conf')
+
 def update_reputation(rep, ip):
     body = { 'object': ip, 'type': 'ip', 'reputation': rep }
     headers = { 'content-type': 'application/json',
         'authorization': 'APIKey ' + os.environ['IPREPD_API_KEY'] }
-    requests.put(os.environ['IPREPD_URL'] + '/type/ip/127.0.0.1',
+    requests.put(os.environ['IPREPD_URL'] + '/type/ip/' + ip,
         json=body, headers=headers)
 
-def simple_request():
-    return requests.get('http://127.0.0.1/iprepd_ping')
+def simple_request(headers={}):
+    return requests.get('http://127.0.0.1/iprepd_ping', headers=headers)
 
 def post_request():
     return requests.post('http://127.0.0.1/iprepd_ping', data='body')
@@ -297,35 +307,182 @@ def test_audit_requests_get_pattern(openresty):
     del os.environ['AUDIT_BLOCKED_REQUESTS']
     del os.environ['AUDIT_URI_LIST']
 
-def test_whitelist_match_multi(openresty):
+def test_whitelist_match_multi(openresty_whitelist):
     update_reputation(0, '127.0.0.1')
     os.environ['BLOCKING_MODE'] = '1'
     os.environ['IPREPD_WHITELISTED_LIST'] = '10.0.0.0/8,127.0.0.0/24'
-    openresty.begin()
+    os.environ['VERBOSE'] = '1'
+    openresty_whitelist.begin()
     ret = simple_request()
-    _, err = openresty.stop()
+    _, err = openresty_whitelist.stop()
+    assert 'whitelist option is deprecated. please switch to allowlist.' in str(err)
+    assert '127.0.0.1 in allowlist' in str(err)
     assert ret.status_code == 200
     del os.environ['BLOCKING_MODE']
     del os.environ['IPREPD_WHITELISTED_LIST']
+    del os.environ['VERBOSE']
 
-def test_whitelist_match_single(openresty):
+def test_whitelist_match_single(openresty_whitelist):
     update_reputation(0, '127.0.0.1')
     os.environ['BLOCKING_MODE'] = '1'
     os.environ['IPREPD_WHITELISTED_LIST'] = '127.0.0.1/32'
-    openresty.begin()
+    os.environ['VERBOSE'] = '1'
+    openresty_whitelist.begin()
     ret = simple_request()
-    _, err = openresty.stop()
+    _, err = openresty_whitelist.stop()
+    assert 'whitelist option is deprecated. please switch to allowlist.' in str(err)
+    assert '127.0.0.1 in allowlist' in str(err)
     assert ret.status_code == 200
     del os.environ['BLOCKING_MODE']
     del os.environ['IPREPD_WHITELISTED_LIST']
+    del os.environ['VERBOSE']
 
-def test_whitelist_nomatch_single(openresty):
+def test_whitelist_nomatch_single(openresty_whitelist):
     update_reputation(0, '127.0.0.1')
     os.environ['BLOCKING_MODE'] = '1'
     os.environ['IPREPD_WHITELISTED_LIST'] = '127.0.0.2/32'
+    os.environ['VERBOSE'] = '1'
+    openresty_whitelist.begin()
+    ret = simple_request()
+    _, err = openresty_whitelist.stop()
+    assert 'whitelist option is deprecated. please switch to allowlist.' in str(err)
+    assert '127.0.0.1 in allowlist' not in str(err)
+    assert ret.status_code == 429
+    del os.environ['BLOCKING_MODE']
+    del os.environ['IPREPD_WHITELISTED_LIST']
+    del os.environ['VERBOSE']
+
+def test_whitelist_match_multi_containsipv6(openresty_whitelist):
+    update_reputation(0, '127.0.0.1')
+    os.environ['BLOCKING_MODE'] = '1'
+    os.environ['IPREPD_WHITELISTED_LIST'] = '127.0.0.1/32,2001:db8::/32'
+    os.environ['VERBOSE'] = '1'
+    openresty_whitelist.begin()
+    ret = simple_request()
+    _, err = openresty_whitelist.stop()
+    assert 'whitelist option is deprecated. please switch to allowlist.' in str(err)
+    assert '127.0.0.1 in allowlist' in str(err)
+    assert ret.status_code == 200
+    del os.environ['BLOCKING_MODE']
+    del os.environ['IPREPD_WHITELISTED_LIST']
+    del os.environ['VERBOSE']
+
+def test_whitelist_match_multi_fromipv6(openresty_whitelist):
+    update_reputation(0, '2001:db8:1234::1')
+    os.environ['BLOCKING_MODE'] = '1'
+    os.environ['IPREPD_WHITELISTED_LIST'] = '127.0.0.1/32,2001:db8::/32'
+    os.environ['VERBOSE'] = '1'
+    openresty_whitelist.begin()
+    # use X-Forwarded-For injection to simulate ipv6 client
+    headers = {"X-Forwarded-For": "2001:db8:1234::1"}
+    ret = simple_request(headers=headers)
+    _, err = openresty_whitelist.stop()
+    assert 'whitelist option is deprecated. please switch to allowlist.' in str(err)
+    assert '2001:db8:1234::1 in allowlist' in str(err)
+    assert ret.status_code == 200
+    del os.environ['BLOCKING_MODE']
+    del os.environ['IPREPD_WHITELISTED_LIST']
+    del os.environ['VERBOSE']
+
+def test_allowlist_match_multi(openresty):
+    update_reputation(0, '127.0.0.1')
+    os.environ['BLOCKING_MODE'] = '1'
+    os.environ['IPREPD_ALLOWLIST'] = '10.0.0.0/8,127.0.0.0/24'
+    os.environ['VERBOSE'] = '1'
     openresty.begin()
     ret = simple_request()
     _, err = openresty.stop()
+    assert '127.0.0.1 in allowlist' in str(err)
+    assert ret.status_code == 200
+    del os.environ['BLOCKING_MODE']
+    del os.environ['IPREPD_ALLOWLIST']
+    del os.environ['VERBOSE']
+
+def test_allowlist_match_single(openresty):
+    update_reputation(0, '127.0.0.1')
+    os.environ['BLOCKING_MODE'] = '1'
+    os.environ['IPREPD_ALLOWLIST'] = '127.0.0.1/32'
+    os.environ['VERBOSE'] = '1'
+    openresty.begin()
+    ret = simple_request()
+    _, err = openresty.stop()
+    assert '127.0.0.1 in allowlist' in str(err)
+    assert ret.status_code == 200
+    del os.environ['BLOCKING_MODE']
+    del os.environ['IPREPD_ALLOWLIST']
+    del os.environ['VERBOSE']
+
+def test_allowlist_nomatch_single(openresty):
+    update_reputation(0, '127.0.0.1')
+    os.environ['BLOCKING_MODE'] = '1'
+    os.environ['IPREPD_ALLOWLIST'] = '127.0.0.2/32'
+    os.environ['VERBOSE'] = '1'
+    openresty.begin()
+    ret = simple_request()
+    _, err = openresty.stop()
+    assert '127.0.0.1 in allowlist' not in str(err)
     assert ret.status_code == 429
     del os.environ['BLOCKING_MODE']
+    del os.environ['IPREPD_ALLOWLIST']
+    del os.environ['VERBOSE']
+
+def test_allowlist_match_multi_containsipv6(openresty):
+    update_reputation(0, '127.0.0.1')
+    os.environ['BLOCKING_MODE'] = '1'
+    os.environ['IPREPD_ALLOWLIST'] = '127.0.0.1/32,2001:db8::/32'
+    os.environ['VERBOSE'] = '1'
+    openresty.begin()
+    ret = simple_request()
+    _, err = openresty.stop()
+    assert '127.0.0.1 in allowlist' in str(err)
+    assert ret.status_code == 200
+    del os.environ['BLOCKING_MODE']
+    del os.environ['IPREPD_ALLOWLIST']
+    del os.environ['VERBOSE']
+
+def test_allowlist_match_multi_fromipv6(openresty):
+    update_reputation(0, '2001:db8:1234::1')
+    os.environ['BLOCKING_MODE'] = '1'
+    os.environ['IPREPD_ALLOWLIST'] = '127.0.0.1/32,2001:db8::/32'
+    os.environ['VERBOSE'] = '1'
+    openresty.begin()
+    # use X-Forwarded-For injection to simulate ipv6 client
+    headers = {"X-Forwarded-For": "2001:db8:1234::1"}
+    ret = simple_request(headers=headers)
+    _, err = openresty.stop()
+    assert '2001:db8:1234::1 in allowlist' in str(err)
+    assert ret.status_code == 200
+    del os.environ['BLOCKING_MODE']
+    del os.environ['IPREPD_ALLOWLIST']
+    del os.environ['VERBOSE']
+
+def test_allowlist_nomatch_multi_fromipv6(openresty):
+    update_reputation(0, '2001:db8:1234::1')
+    os.environ['BLOCKING_MODE'] = '1'
+    os.environ['IPREPD_ALLOWLIST'] = '127.0.0.1/32,4001:db8::/32'
+    os.environ['VERBOSE'] = '1'
+    openresty.begin()
+    # use X-Forwarded-For injection to simulate ipv6 client
+    headers = {"X-Forwarded-For": "2001:db8:1234::1"}
+    ret = simple_request(headers=headers)
+    _, err = openresty.stop()
+    assert '2001:db8:1234::1 in allowlist' not in str(err)
+    assert ret.status_code == 429
+    del os.environ['BLOCKING_MODE']
+    del os.environ['IPREPD_ALLOWLIST']
+    del os.environ['VERBOSE']
+
+def test_allowlist_overrides_whitelist(openresty_bothlists):
+    update_reputation(0, '127.0.0.1')
+    os.environ['BLOCKING_MODE'] = '1'
+    os.environ['IPREPD_WHITELISTED_LIST'] = '127.0.0.1/32'
+    os.environ['IPREPD_ALLOWLIST'] = '4001:db8::/32'
+    openresty_bothlists.begin()
+    ret = simple_request()
+    _, err = openresty_bothlists.stop()
+    assert 'whitelist option is deprecated. please switch to allowlist.' in str(err)
+    assert 'both whitelist and allowlist specified - using allowlist' in str(err)
+    assert ret.status_code == 429
+    del os.environ['BLOCKING_MODE']
+    del os.environ['IPREPD_ALLOWLIST']
     del os.environ['IPREPD_WHITELISTED_LIST']

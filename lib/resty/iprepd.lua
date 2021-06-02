@@ -1,12 +1,16 @@
 local cjson = require('cjson')
 local http = require('resty.http')
-local iputils = require('resty.iputils')
 local lrucache = require('resty.lrucache')
 local statsd = require('resty.statsd')
+local ipmatcher = require('resty.ipmatcher')
 
 function fatal_error(error_msg)
   ngx.log(ngx.ERR, error_msg)
   os.exit(1)
+end
+
+function warning(message)
+  ngx.log(ngx.ERR, message)
 end
 
 local _M = {}
@@ -40,14 +44,27 @@ function _M.new(options)
     end
   end
 
-  local whitelist = nil
+  local allowlist = nil
+  local allowlist_table = {}
   if options.whitelist and type(options.whitelist) == 'string' then
-    local whitelistbuf = {}
+    warning("whitelist option is deprecated. please switch to allowlist.")
     for s in string.gmatch(options.whitelist, "([^,]+)") do
-      table.insert(whitelistbuf, s)
+      table.insert(allowlist_table, s)
     end
-    whitelist = iputils.parse_cidrs(whitelistbuf)
+    allowlist = ipmatcher.new(allowlist_table)
   end
+
+  if options.allowlist and type(options.allowlist) == 'string' then
+    if type(next(allowlist_table)) ~= "nil" then
+      warning("both whitelist and allowlist specified - using allowlist")
+      allowlist_table = {}
+    end
+    for s in string.gmatch(options.allowlist, "([^,]+)") do
+      table.insert(allowlist_table, s)
+    end
+    allowlist = ipmatcher.new(allowlist_table)
+  end
+
 
   if options.audit_blocked_requests == 1 then
     if next(audit_uri_list) == nil then
@@ -74,7 +91,7 @@ function _M.new(options)
     statsd_flush_timer = options.statsd_flush_timer or 5,
     blocking_mode = options.blocking_mode or 0,
     verbose = options.verbose or 0,
-    whitelist = whitelist,
+    allowlist = allowlist,
     audit_blocked_requests = options.audit_blocked_requests or 0,
     audit_include_headers = options.audit_include_headers or 0,
     audit_uri_list = audit_uri_list,
@@ -87,13 +104,13 @@ function _M.check(self, ip)
   self:debug_log(string.format("Checking %s", ip))
   ngx.req.set_header('X-Foxsec-IP-Reputation-Below-Threshold', 'false')
   ngx.req.set_header('X-Foxsec-Block', 'false')
-  if self.whitelist then
-    if iputils.ip_in_cidrs(ip, self.whitelist) then
-      self:debug_log(string.format("%s in whitelist", ip))
+  
+  if self.allowlist then
+    if self.allowlist:match(ip) then
+      self:debug_log(string.format("%s in allowlist", ip))
       return
     end
   end
-
 
   local reputation = self:get_reputation(ip)
   if reputation then
@@ -162,6 +179,7 @@ function _M.get_reputation(self, ip)
       end
     elseif resp.status == 404 then
       reputation = 100
+      self:debug_log(string.format("no reputation for %s", ip))
     else
       ngx.log(ngx.ERR, string.format("iprepd responded with a %d http status code", resp.status))
       if self.statsd then
