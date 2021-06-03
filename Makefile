@@ -2,7 +2,7 @@ IMAGE_NAME	:= "iprepd-nginx"
 
 # Build docker images for testing and prod
 build:
-	docker-compose build integration-test
+	docker-compose build --no-cache integration-test
 	docker-compose build iprepd-nginx
 
 # Build test image

@@ -1,7 +1,8 @@
 FROM openresty/openresty:1.19.3.1-centos AS base
 
-# Add nginx user
-RUN groupadd nginx && useradd -g nginx --shell /bin/false nginx
+# Update + Add nginx user
+RUN dnf --nodocs -y upgrade-minimal &&\
+	groupadd nginx && useradd -g nginx --shell /bin/false nginx
 
 # Install iprepd-nginx from the local branch in the image, and our vendored Lua
 # dependencies
@@ -18,7 +19,7 @@ FROM base AS integration-test
 # Install utils for testing
 # disable updates for openresty to ensure we test against
 # same version as we use for production
-RUN yum install -y python3  && \
+RUN dnf install -y python3  && \
 	pip3 install pytest requests && \
 	mkdir -p /opt/iprepd-nginx/{etc,test} && \
 	mkdir -p /opt/iprepd-nginx/etc/testconf && \
