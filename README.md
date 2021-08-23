@@ -105,7 +105,7 @@ For example,  `audit_uri_list = {"test", "/test/%d/somethingelse"}` would allow 
 --                              to statsd (defaults to 100)
 --    statsd_flush_timer - Interval for attempting to flush the stats in seconds. (defaults to 5)
 --    blocking_mode - Enables (1) or disables (0) blocking within nginx by returning a
---                    403. (defaults to disabled)
+--                    429. (defaults to disabled)
 --    verbose - Enables (1) or disables (0) verbose logging. Messages are logged with a
 --              severity of "ERROR" so that nginx log levels do not need to be changed. (defaults
 --              to disabled)
