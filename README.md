@@ -212,6 +212,12 @@ server {
 ### Common Gotchas
 
 * Make sure iprepd-nginx is seeing the real client IP. You will usually need to use something like [ngx_http_realip_module](https://nginx.org/en/docs/http/ngx_http_realip_module.html), and confirm that it is configured correctly.
+* Logging is rather inflexible and certain messages can't be suppressed - i.e. those related to flushing of metrics.
+ex.
+```
+[alert] 7#7: *381345 send() returned zero, context: ngx.timer
+[alert] 7#7: *381392 send() returned zero (115: Operation now in progress), context: ngx.timer
+```
 
 ## Running iprepd-nginx dev environment locally
 A dev environment is provided that can be used to test iprepd-nginx with iprepd and a dummy backend service (in this case nginx with static content).
