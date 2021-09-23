@@ -218,6 +218,7 @@ ex.
 [alert] 7#7: *381345 send() returned zero, context: ngx.timer
 [alert] 7#7: *381392 send() returned zero (115: Operation now in progress), context: ngx.timer
 ```
+This can be rather confusing but is expected behaviour.
 
 ## Running iprepd-nginx dev environment locally
 A dev environment is provided that can be used to test iprepd-nginx with iprepd and a dummy backend service (in this case nginx with static content).
